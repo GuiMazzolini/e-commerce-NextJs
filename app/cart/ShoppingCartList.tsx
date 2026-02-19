@@ -13,10 +13,8 @@ export default function ShoppingCartList({ initialCartProducts } : { initialCart
   const setCart = useCartStore((s) => s.setCart);
 
   useEffect(() => {
-    if (cartProducts.length === 0) {
-      setCart(initialCartProducts);
-    }
-  }, [cartProducts.length, initialCartProducts, setCart]);
+    setCart(initialCartProducts);
+  }, [initialCartProducts]);
 
   if (cartProducts.length === 0) {
     return (

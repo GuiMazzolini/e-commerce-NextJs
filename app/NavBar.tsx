@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import AuthButton from "./components/AuthButton";
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -36,8 +37,10 @@ export default function NavBar() {
                     > 
                         Checkout 
                     </Link>
+                   
                 </li>
             </ul>
+             <AuthButton />
         </div>
     </nav>
   )
