@@ -1,15 +1,60 @@
-import NotFoundPage from "@/app/not-found";
+"use client";
+
+import { useEffect, useState } from "react";
+import { useCartStore } from "@/app/lib/store/cartStore";
+import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
+import NotFoundPage from "@/app/not-found";
 
-const ProductDetailPage = async ({ params }: { params: Promise<{ id: string }> }) => {
-  const { id } = await params;
-  const response = await fetch("http://localhost:3000/api/products/" + id);
-  const product = await response.json();
+type Product = {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageUrl: string;
+};
 
+export default function ProductDetailPage() {
+  const { id } = useParams<{ id: string }>();
+  const router = useRouter();
+  const [product, setProduct] = useState<Product | null>(null);
+  const [notFound, setNotFound] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
 
-  if (!product) {
-    return <NotFoundPage />;
+  const { cartProducts, addToCart, removeFromCart, fetchCart, isLoading } = useCartStore();
+  const inCart = cartProducts.some((p) => p.id === id);
+  const loading = isLoading(id);
+
+  async function handleBuyNow() {
+    if (!product) return;
+    setBuyingNow(true);
+    try {
+      if (!inCart) {
+        await addToCart(product.id);
+      }
+      router.push("/checkout");
+    } finally {
+      setBuyingNow(false);
+    }
   }
+
+  useEffect(() => {
+    fetch(`/api/products/${id}`)
+      .then((res) => {
+        if (!res.ok) { setNotFound(true); return null; }
+        return res.json();
+      })
+      .then((data) => data && setProduct(data));
+
+    fetchCart();
+  }, [id]);
+
+  if (notFound) return <NotFoundPage />;
+  if (!product) return (
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+      <div className="text-gray-500 text-xl">Loading...</div>
+    </div>
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -53,11 +98,23 @@ const ProductDetailPage = async ({ params }: { params: Promise<{ id: string }> }
 
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
-                <button className="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-semibold py-4 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg">
-                  Add to Cart
+                <button
+                  onClick={() => inCart ? removeFromCart(product.id) : addToCart(product.id)}
+                  disabled={loading}
+                  className={`flex-1 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
+                    ${inCart
+                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
+                      : 'bg-blue-600 text-white hover:bg-blue-700'
+                    }`}
+                >
+                  {loading ? '...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
                 </button>
-                <button className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-4 px-8 rounded-lg transition-colors duration-200">
-                  Buy Now
+                <button
+                  onClick={handleBuyNow}
+                  disabled={loading || buyingNow}
+                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {buyingNow ? "Processing..." : "Buy Now"}
                 </button>
               </div>
 
@@ -80,6 +137,4 @@ const ProductDetailPage = async ({ params }: { params: Promise<{ id: string }> }
       </div>
     </div>
   );
-};
-
-export default ProductDetailPage;
+}

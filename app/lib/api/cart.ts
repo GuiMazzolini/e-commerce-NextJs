@@ -1,44 +1,35 @@
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+import { Product } from "../../product-data";
 
-const USER_ID = "2";
+const API_BASE_URL =
+  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-export async function updateCartQuantity(
-  productId: string,
-  quantity: number
-) {
-  const response = await fetch(
-    `${API_BASE_URL}/api/users/${USER_ID}/cart`,
-    {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ productId, quantity }),
-    }
-  );
+async function request(method: string, body?: unknown): Promise<Product[]> {
+  const res = await fetch(`${API_BASE_URL}/api/cart`, {
+    method,
+    headers: { "Content-Type": "application/json" },
+    body: body ? JSON.stringify(body) : undefined,
+    credentials: "include",
+  });
 
-  if (!response.ok) {
-    throw new Error("Failed to update quantity");
+  if (!res.ok) {
+    throw new Error(`Cart request failed: ${res.status}`);
   }
 
-  return response.json();
+  return res.json();
 }
 
-export async function removeCartItem(productId: string) {
-  const response = await fetch(
-    `${API_BASE_URL}/api/users/${USER_ID}/cart`,
-    {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ productId }),
-    }
-  );
+export function fetchCartItems() {
+  return request("GET");
+}
 
-  if (!response.ok) {
-    throw new Error("Failed to remove item");
-  }
+export function addCartItem(productId: string) {
+  return request("POST", { productId });
+}
 
-  return response.json();
+export function updateCartQuantity(productId: string, quantity: number) {
+  return request("PATCH", { productId, quantity });
+}
+
+export function removeCartItem(productId: string) {
+  return request("DELETE", { productId });
 }

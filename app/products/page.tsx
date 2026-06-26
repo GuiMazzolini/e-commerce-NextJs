@@ -1,16 +1,14 @@
-import ProductsList from '../ProductsList';
+import { connectToDB } from "@/app/api/db";
+import ProductsList from '../components/ProductsList';
+import { WithId, Document } from "mongodb";
 
 export default async function ProductsPage() {
-  const response = await fetch('http://localhost:3000/api/products');
-  const products = await response.json();
-
-  const response2 = await fetch('http://localhost:3000/api/users/2/cart/', {cache: 'no-cache'});
-  const cartProducts = await response2.json();
+  const { db } = await connectToDB();
+  const products = await db.collection('products').find({}).toArray();
 
 
-  return (
-    <>
-      <ProductsList products={products} initialCartProducts={cartProducts}/>
-    </>
-  );
+  const serialized = products.map(({ _id, ...rest }: WithId<Document>) => rest);
+
+
+  return <ProductsList products={serialized} />;
 }

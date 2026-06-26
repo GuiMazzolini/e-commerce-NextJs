@@ -40,19 +40,19 @@ export default function LandingPage() {
                 </Link>
               </div>
               
-              {/* Stats */}
+              {/* Highlights */}
               <div className="grid grid-cols-3 gap-8 pt-8 border-t border-gray-200">
                 <div>
-                  <div className="text-3xl font-bold text-gray-900">500+</div>
-                  <div className="text-sm text-gray-600">Products</div>
+                  <div className="text-2xl font-bold text-gray-900">Secure</div>
+                  <div className="text-sm text-gray-600">Stripe Checkout</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-gray-900">10k+</div>
-                  <div className="text-sm text-gray-600">Happy Customers</div>
+                  <div className="text-2xl font-bold text-gray-900">OAuth</div>
+                  <div className="text-sm text-gray-600">GitHub &amp; Google</div>
                 </div>
                 <div>
-                  <div className="text-3xl font-bold text-gray-900">4.9★</div>
-                  <div className="text-sm text-gray-600">Rating</div>
+                  <div className="text-2xl font-bold text-gray-900">Free</div>
+                  <div className="text-sm text-gray-600">Shipping over $50</div>
                 </div>
               </div>
             </div>
@@ -63,12 +63,20 @@ export default function LandingPage() {
               <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden p-8">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
-                    <div className="aspect-square bg-linear-to-br from-blue-100 to-blue-200 rounded-2xl"></div>
-                    <div className="aspect-4/3 bg-linear-to-br from-purple-100 to-purple-200 rounded-2xl"></div>
+                    <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100">
+                      <Image src="/hat.jpg" alt="Hat" fill className="object-cover" sizes="(max-width: 1024px) 50vw, 25vw" />
+                    </div>
+                    <div className="relative aspect-4/3 rounded-2xl overflow-hidden bg-gray-100">
+                      <Image src="/mug.jpg" alt="Mug" fill className="object-cover" sizes="(max-width: 1024px) 50vw, 25vw" />
+                    </div>
                   </div>
                   <div className="space-y-4 pt-8">
-                    <div className="aspect-4/3 bg-linear-to-br from-pink-100 to-pink-200 rounded-2xl"></div>
-                    <div className="aspect-square bg-linear-to-br from-orange-100 to-orange-200 rounded-2xl"></div>
+                    <div className="relative aspect-4/3 rounded-2xl overflow-hidden bg-gray-100">
+                      <Image src="/shirt.jpg" alt="Shirt" fill className="object-cover" sizes="(max-width: 1024px) 50vw, 25vw" />
+                    </div>
+                    <div className="relative aspect-square rounded-2xl overflow-hidden bg-gray-100">
+                      <Image src="/apron.jpg" alt="Apron" fill className="object-cover" sizes="(max-width: 1024px) 50vw, 25vw" />
+                    </div>
                   </div>
                 </div>
               </div>
@@ -130,28 +138,40 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Featured Categories */}
+      {/* Featured Products */}
       <section id="featured" className="py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Shop by Category</h2>
+            <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Products</h2>
             <p className="text-xl text-gray-600">
-              Browse our popular collections
+              A peek at what&apos;s in the shop
             </p>
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {['Clothing', 'Accessories', 'Electronics', 'Home & Living'].map((category, index) => (
+            {[
+              { name: 'Hat', image: 'hat.jpg' },
+              { name: 'Mug', image: 'mug.jpg' },
+              { name: 'Shirt', image: 'shirt.jpg' },
+              { name: 'Apron', image: 'apron.jpg' },
+            ].map((product) => (
               <Link 
-                key={category}
+                key={product.name}
                 href="/products"
-                className="group relative overflow-hidden rounded-2xl aspect-square bg-linear-to-br from-gray-100 to-gray-200 hover:shadow-xl transition-all hover:-translate-y-2"
+                className="group relative overflow-hidden rounded-2xl aspect-square bg-gray-200 hover:shadow-xl transition-all hover:-translate-y-2"
               >
+                <Image
+                  src={`/${product.image}`}
+                  alt={product.name}
+                  fill
+                  className="object-cover transition-transform group-hover:scale-105"
+                  sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                />
                 <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent"></div>
                 <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <h3 className="text-2xl font-bold text-white mb-2">{category}</h3>
+                  <h3 className="text-2xl font-bold text-white mb-2">{product.name}</h3>
                   <p className="text-white/80 text-sm group-hover:translate-x-2 transition-transform">
-                    Explore now →
+                    Shop now →
                   </p>
                 </div>
               </Link>
@@ -178,15 +198,16 @@ export default function LandingPage() {
         </div>
       </section>
 
-      {/* Trust Badges */}
+      {/* Payments */}
       <section className="py-16 bg-white border-t border-gray-200">
-        <div className="container mx-auto px-4">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 items-center justify-items-center opacity-60">
-            <div className="text-2xl font-bold text-gray-400">VISA</div>
-            <div className="text-2xl font-bold text-gray-400">MASTERCARD</div>
-            <div className="text-2xl font-bold text-gray-400">PAYPAL</div>
-            <div className="text-2xl font-bold text-gray-400">STRIPE</div>
-          </div>
+        <div className="container mx-auto px-4 text-center">
+          <p className="text-gray-600">
+            Secure payments powered by{" "}
+            <span className="font-semibold text-gray-900">Stripe</span>
+          </p>
+          <p className="text-sm text-gray-400 mt-2">
+            Cards are processed in test mode for this demo.
+          </p>
         </div>
       </section>
     </div>
