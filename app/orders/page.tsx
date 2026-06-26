@@ -3,7 +3,7 @@ import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectToDB } from "@/app/api/db";
-import type { Order, ShippingAddress } from "@/app/lib/orders";
+import type { Order, OrderItem, ShippingAddress } from "@/app/lib/orders";
 import { redirect } from "next/navigation";
 
 export const metadata: Metadata = {
@@ -57,7 +57,9 @@ export default async function OrdersPage() {
     .sort({ createdAt: -1 })
     .toArray();
 
-  const orders = orderDocs.map((doc) => toOrder(doc as Record<string, unknown>));
+  const orders: Order[] = orderDocs.map((doc: Record<string, unknown>) =>
+    toOrder(doc)
+  );
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -80,7 +82,7 @@ export default async function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-6">
-            {orders.map((order) => (
+            {orders.map((order: Order) => (
               <article
                 key={order.stripeSessionId}
                 className="bg-white rounded-xl shadow-md overflow-hidden"
@@ -98,7 +100,7 @@ export default async function OrdersPage() {
 
                 <div className="px-6 py-5 space-y-4">
                   <ul className="divide-y divide-gray-100">
-                    {order.items.map((item, index) => (
+                    {order.items.map((item: OrderItem, index: number) => (
                       <li
                         key={`${order.stripeSessionId}-${index}`}
                         className="flex justify-between py-3 text-sm"

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { getStripe } from "@/app/lib/stripe";
+import { fulfillCheckoutSession } from "@/app/lib/orders";
 
 type Props = {
   searchParams: Promise<{ session_id?: string }>;
@@ -11,9 +11,8 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
 
   if (session_id) {
     try {
-      const stripe = getStripe();
-      const session = await stripe.checkout.sessions.retrieve(session_id);
-      paid = session.payment_status === "paid";
+      const result = await fulfillCheckoutSession(session_id);
+      paid = result.paid;
     } catch {
       paid = false;
     }

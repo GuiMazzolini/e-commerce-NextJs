@@ -1,4 +1,6 @@
 import type Stripe from "stripe";
+import { connectToDB } from "@/app/api/db";
+import { getStripe } from "@/app/lib/stripe";
 
 export type OrderItem = {
   name: string;
@@ -71,4 +73,45 @@ export function buildOrderFromStripeSession(
     status: "paid",
     createdAt: new Date(),
   };
+}
+
+/**
+ * Idempotently fulfills a paid Checkout Session: saves the order (once) and
+ * empties the user's cart. Safe to call from both the Stripe webhook and the
+ * success page, so fulfillment works even if the webhook hasn't been received.
+ */
+export async function fulfillCheckoutSession(
+  sessionId: string
+): Promise<{ paid: boolean; fulfilled: boolean }> {
+  const stripe = getStripe();
+  const session = await stripe.checkout.sessions.retrieve(sessionId, {
+    expand: ["line_items"],
+  });
+
+  if (session.payment_status !== "paid") {
+    return { paid: false, fulfilled: false };
+  }
+
+  const userId = session.client_reference_id || session.metadata?.userId;
+  if (!userId || typeof userId !== "string") {
+    return { paid: true, fulfilled: false };
+  }
+
+  const { db } = await connectToDB();
+
+  const existingOrder = await db
+    .collection("orders")
+    .findOne({ stripeSessionId: session.id });
+
+  if (!existingOrder) {
+    const order = buildOrderFromStripeSession(session, userId);
+    await db.collection("orders").insertOne(order);
+  }
+
+  await db.collection("carts").updateOne(
+    { userId },
+    { $set: { items: [], updatedAt: new Date() } }
+  );
+
+  return { paid: true, fulfilled: true };
 }
