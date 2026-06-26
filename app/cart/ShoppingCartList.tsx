@@ -5,6 +5,11 @@ import { Product } from "../product-data";
 import Link from "next/link";
 import CartItem from "../components/CartItem";
 import { useCartStore } from "../lib/store/cartStore";
+import {
+  FREE_SHIPPING_THRESHOLD,
+  getOrderTotal,
+  getShippingCost,
+} from "../lib/shipping";
 
 export default function ShoppingCartList({ initialCartProducts }: { initialCartProducts: Product[] }) {
   const cartProducts = useCartStore((s) => s.cartProducts);
@@ -12,6 +17,10 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
   const totalItems = useCartStore((s) => s.getTotalItems());
   const setCart = useCartStore((s) => s.setCart);
   const fetchCart = useCartStore((s) => s.fetchCart);
+
+  const shipping = getShippingCost(subtotal);
+  const total = getOrderTotal(subtotal);
+  const remainingForFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
 
   useEffect(() => {
     setCart(initialCartProducts);
@@ -65,13 +74,23 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
 
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
-                  <span className="text-green-600 font-semibold">FREE</span>
+                  {shipping === 0 ? (
+                    <span className="text-green-600 font-semibold">FREE</span>
+                  ) : (
+                    <span>${shipping.toFixed(2)}</span>
+                  )}
                 </div>
+
+                {remainingForFreeShipping > 0 && (
+                  <p className="text-sm text-gray-500">
+                    Add ${remainingForFreeShipping.toFixed(2)} more for free shipping.
+                  </p>
+                )}
 
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex justify-between text-xl font-bold text-gray-900">
                     <span>Total</span>
-                    <span className="text-blue-600">${subtotal.toFixed(2)}</span>
+                    <span className="text-blue-600">${total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

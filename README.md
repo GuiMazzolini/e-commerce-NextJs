@@ -1,36 +1,114 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# StyleShop — Full-Stack E-commerce Demo
+
+A portfolio-ready e-commerce app with product browsing, authenticated cart management, and Stripe Checkout payments.
+
+**Repository:** [github.com/GuiMazzolini/e-commerce-NextJs](https://github.com/GuiMazzolini/e-commerce-NextJs)
+
+## Tech Stack
+
+- **Framework:** Next.js 16 (App Router), React 19, TypeScript
+- **Styling:** Tailwind CSS v4
+- **Database:** MongoDB
+- **Auth:** NextAuth.js (GitHub & Google OAuth)
+- **Payments:** Stripe Checkout (hosted) + webhooks
+- **State:** Zustand
+
+## Features
+
+- Product catalog with detail pages
+- User authentication via GitHub or Google
+- Persistent shopping cart (per user, stored in MongoDB)
+- Stripe Checkout with server-validated line items
+- Webhook clears cart after successful payment
+- Responsive UI with sticky navbar and cart badge
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
+
+- Node.js 20+
+- MongoDB Atlas cluster (or local MongoDB)
+- GitHub and/or Google OAuth app credentials
+- Stripe account (test mode is fine)
+
+### 1. Clone and install
+
+```bash
+git clone https://github.com/GuiMazzolini/e-commerce-NextJs.git
+cd e-commerce-NextJs
+npm install
+```
+
+### 2. Environment variables
+
+Copy the example file and fill in your values:
+
+```bash
+cp .env.example .env.local
+```
+
+See `.env.example` for the full list. At minimum you need MongoDB credentials, NextAuth secret + OAuth keys, and Stripe keys.
+
+### 3. Seed products (if your database is empty)
+
+Insert product documents into the `products` collection in the `ecommerce-nextjs` database. Each document needs: `id`, `name`, `price`, `description`, `imageUrl` (filename in `public/`, e.g. `hat.jpg`).
+
+### 4. Run locally
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 5. Stripe webhooks (local)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+In a separate terminal, forward Stripe events to your local server:
 
-## Learn More
+```bash
+stripe listen --forward-to localhost:3000/api/webhooks/stripe
+```
 
-To learn more about Next.js, take a look at the following resources:
+Copy the webhook signing secret (`whsec_...`) into `.env.local` as `STRIPE_WEBHOOK_SECRET`, then restart the dev server.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Use [Stripe test cards](https://docs.stripe.com/testing) (e.g. `4242 4242 4242 4242`) to complete a purchase.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Project Structure
 
-## Deploy on Vercel
+```
+app/
+├── api/
+│   ├── auth/          # NextAuth routes
+│   ├── cart/          # Cart CRUD
+│   ├── checkout/      # Stripe session creation
+│   ├── products/      # Product API
+│   └── webhooks/      # Stripe webhook handler
+├── cart/              # Shopping cart page
+├── checkout/          # Checkout + success pages
+├── components/        # NavBar, AuthButton, CartItem, ProductsList
+├── lib/               # Stripe helper, cart store, API client
+└── products/          # Product listing + detail pages
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Deploy
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+1. Push to GitHub and import the repo on [Vercel](https://vercel.com).
+2. Add all environment variables from `.env.example` in the Vercel dashboard.
+3. Set `NEXT_PUBLIC_APP_URL` to your production URL (e.g. `https://your-app.vercel.app`).
+4. In Stripe Dashboard, add a webhook endpoint:
+   `https://your-app.vercel.app/api/webhooks/stripe`
+   with event `checkout.session.completed`.
+5. Update OAuth redirect URLs in GitHub/Google to include your production domain.
+
+## Scripts
+
+| Command | Description |
+|---------|-------------|
+| `npm run dev` | Start development server |
+| `npm run build` | Production build |
+| `npm run start` | Start production server |
+| `npm run lint` | Run ESLint |
+
+## Author
+
+[GuiMazzolini](https://github.com/GuiMazzolini)

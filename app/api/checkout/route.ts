@@ -3,6 +3,7 @@ import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { getServerSession } from "next-auth";
 import { NextResponse } from "next/server";
 import { getAppUrl, getStripe } from "@/app/lib/stripe";
+import { getShippingCost } from "@/app/lib/shipping";
 
 type CartItem = { productId: string; quantity: number };
 type DBProduct = {
@@ -67,9 +68,27 @@ export async function POST() {
     };
   });
 
+  const subtotal = cartProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
+  const shippingCost = getShippingCost(subtotal);
+
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",
     line_items,
+    shipping_address_collection: {
+      allowed_countries: ["US", "CA", "GB", "BR", "PT", "DE", "FR", "ES", "IT", "NL"],
+    },
+    shipping_options: [
+      {
+        shipping_rate_data: {
+          type: "fixed_amount",
+          display_name: shippingCost === 0 ? "Free shipping" : "Standard shipping",
+          fixed_amount: {
+            amount: Math.round(shippingCost * 100),
+            currency: "usd",
+          },
+        },
+      },
+    ],
     success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout`,
     client_reference_id: session.user.email,

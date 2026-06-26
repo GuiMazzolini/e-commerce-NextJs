@@ -1,4 +1,5 @@
 import { connectToDB } from "@/app/api/db";
+import { buildOrderFromStripeSession } from "@/app/lib/orders";
 import { getStripe } from "@/app/lib/stripe";
 import { NextResponse } from "next/server";
 
@@ -25,8 +26,23 @@ export async function POST(req: Request) {
   if (event.type === "checkout.session.completed") {
     const session = event.data.object;
     const userId = session.client_reference_id || session.metadata?.userId;
+
     if (userId && typeof userId === "string") {
       const { db } = await connectToDB();
+
+      const existingOrder = await db
+        .collection("orders")
+        .findOne({ stripeSessionId: session.id });
+
+      if (!existingOrder) {
+        const fullSession = await stripe.checkout.sessions.retrieve(session.id, {
+          expand: ["line_items"],
+        });
+
+        const order = buildOrderFromStripeSession(fullSession, userId);
+        await db.collection("orders").insertOne(order);
+      }
+
       await db.collection("carts").updateOne(
         { userId },
         { $set: { items: [], updatedAt: new Date() } }

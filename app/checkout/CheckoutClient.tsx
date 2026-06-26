@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useState } from "react";
 import type { Product } from "@/app/product-data";
+import { getOrderTotal, getShippingCost } from "@/app/lib/shipping";
 
 type CheckoutClientProps = {
   initialCartProducts: Product[];
@@ -18,6 +19,8 @@ export default function CheckoutClient({ initialCartProducts }: CheckoutClientPr
     0
   );
   const totalItems = initialCartProducts.reduce((sum, p) => sum + (p.quantity || 1), 0);
+  const shipping = getShippingCost(subtotal);
+  const total = getOrderTotal(subtotal);
 
   async function startCheckout() {
     setError(null);
@@ -92,12 +95,16 @@ export default function CheckoutClient({ initialCartProducts }: CheckoutClientPr
                 </div>
                 <div className="flex justify-between text-gray-600">
                   <span>Shipping</span>
-                  <span className="text-green-600 font-semibold">FREE</span>
+                  {shipping === 0 ? (
+                    <span className="text-green-600 font-semibold">FREE</span>
+                  ) : (
+                    <span>${shipping.toFixed(2)}</span>
+                  )}
                 </div>
                 <div className="border-t border-gray-200 pt-4">
                   <div className="flex justify-between text-xl font-bold text-gray-900">
                     <span>Total</span>
-                    <span className="text-blue-600">${subtotal.toFixed(2)}</span>
+                    <span className="text-blue-600">${total.toFixed(2)}</span>
                   </div>
                 </div>
               </div>

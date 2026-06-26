@@ -9,6 +9,7 @@ const links = [
   { href: '/products', label: 'Products' },
   { href: '/cart', label: 'Cart' },
   { href: '/checkout', label: 'Checkout' },
+  { href: '/orders', label: 'Orders' },
 ];
 
 export default function NavBar() {
