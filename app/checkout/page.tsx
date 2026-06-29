@@ -1,8 +1,14 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectToDB } from "@/app/api/db";
 import { redirect } from "next/navigation";
 import CheckoutClient from "./CheckoutClient";
+
+export const metadata: Metadata = {
+  title: "Checkout",
+  description: "Securely complete your StyleShop purchase with Stripe.",
+};
 
 type CartItem = { productId: string; quantity: number };
 type DBProduct = {

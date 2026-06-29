@@ -1,7 +1,13 @@
+import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectToDB } from "@/app/api/db";
 import ShoppingCartList from "./ShoppingCartList";
+
+export const metadata: Metadata = {
+  title: "Shopping Cart",
+  description: "Review the items in your cart before checking out.",
+};
 
 type CartItem = { productId: string; quantity: number };
 type DBProduct = { id: string; name: string; price: number; description: string; imageUrl: string };
