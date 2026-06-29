@@ -60,15 +60,27 @@ export default function CartItem({ product }: CartItemProps) {
 
             <div className="flex items-center gap-3">
               <div className="flex items-center border border-gray-300 rounded-lg">
-                <button
-                  onClick={() =>
-                    updateQuantity(product.id, quantity - 1)
-                  }
-                  disabled={loading || quantity <= 1}
-                  className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
-                >
-                  −
-                </button>
+                {quantity <= 1 ? (
+                  <button
+                    onClick={() => removeFromCart(product.id)}
+                    disabled={loading}
+                    aria-label="Remove from cart"
+                    className="px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
+                  >
+                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    </svg>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => updateQuantity(product.id, quantity - 1)}
+                    disabled={loading}
+                    aria-label="Decrease quantity"
+                    className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                  >
+                    −
+                  </button>
+                )}
 
                 <span className="px-4 py-2 font-semibold min-w-12 text-center">
                   {loading ? "..." : quantity}
@@ -79,19 +91,12 @@ export default function CartItem({ product }: CartItemProps) {
                     updateQuantity(product.id, quantity + 1)
                   }
                   disabled={loading}
+                  aria-label="Increase quantity"
                   className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >
                   +
                 </button>
               </div>
-
-              <button
-                onClick={() => removeFromCart(product.id)}
-                disabled={loading}
-                className="px-4 py-2 rounded-lg font-semibold transition-all bg-red-100 text-red-700 hover:bg-red-200 disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                Remove
-              </button>
             </div>
           </div>
         </div>

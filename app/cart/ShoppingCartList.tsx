@@ -1,9 +1,11 @@
 "use client";
 
 import { useEffect } from "react";
+import { useSession } from "next-auth/react";
 import { Product } from "../product-data";
 import Link from "next/link";
 import CartItem from "../components/CartItem";
+import CartErrorBanner from "../components/CartErrorBanner";
 import { useCartStore } from "../lib/store/cartStore";
 import {
   FREE_SHIPPING_THRESHOLD,
@@ -12,6 +14,9 @@ import {
 } from "../lib/shipping";
 
 export default function ShoppingCartList({ initialCartProducts }: { initialCartProducts: Product[] }) {
+  const { status } = useSession();
+  const isGuest = status === "unauthenticated";
+
   const cartProducts = useCartStore((s) => s.cartProducts);
   const subtotal = useCartStore((s) => s.getSubtotal());
   const totalItems = useCartStore((s) => s.getTotalItems());
@@ -55,6 +60,21 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
       <div className="container mx-auto px-4 max-w-6xl">
         <h1 className="text-4xl font-bold text-gray-900 mb-8">Shopping Cart</h1>
 
+        <CartErrorBanner />
+
+        {isGuest && (
+          <p className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+            You&apos;re shopping as a guest.{" "}
+            <Link
+              href="/api/auth/signin?callbackUrl=/cart"
+              className="font-semibold underline hover:text-amber-900"
+            >
+              Sign in
+            </Link>{" "}
+            to save your cart across devices and complete checkout.
+          </p>
+        )}
+
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
             {cartProducts.map((product) => (
@@ -96,10 +116,10 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
               </div>
 
               <Link
-                href="/checkout"
+                href={isGuest ? "/api/auth/signin?callbackUrl=/checkout" : "/checkout"}
                 className="block text-center w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg mb-4"
               >
-                Proceed to Checkout
+                {isGuest ? "Sign in to Checkout" : "Proceed to Checkout"}
               </Link>
 
               <Link

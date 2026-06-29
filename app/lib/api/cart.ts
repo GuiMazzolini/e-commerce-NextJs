@@ -3,6 +3,15 @@ import { Product } from "../../product-data";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
+export class CartRequestError extends Error {
+  status: number;
+  constructor(status: number) {
+    super(`Cart request failed: ${status}`);
+    this.name = "CartRequestError";
+    this.status = status;
+  }
+}
+
 async function request(
   method: string,
   body?: unknown,
@@ -16,7 +25,7 @@ async function request(
   });
 
   if (!res.ok) {
-    throw new Error(`Cart request failed: ${res.status}`);
+    throw new CartRequestError(res.status);
   }
 
   return res.json();

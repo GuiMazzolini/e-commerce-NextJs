@@ -7,15 +7,24 @@ import {
   removeCartItem,
   fetchCartItems,
   mergeGuestCart,
+  CartRequestError,
 } from "../api/cart";
 
 type LoadingMap = Record<string, boolean>;
+
+function cartErrorMessage(err: unknown): string {
+  if (err instanceof CartRequestError && err.status === 401) {
+    return "Please sign in to update your cart.";
+  }
+  return "Could not update your cart. Please try again.";
+}
 
 interface CartState {
   cartProducts: Product[];
   guestCart: Product[];
   isAuthenticated: boolean;
   loading: LoadingMap;
+  cartError: string | null;
 
   setAuthenticated: (value: boolean) => Promise<void>;
   setCart: (products: Product[]) => void;
@@ -23,6 +32,7 @@ interface CartState {
   addToCart: (product: Product) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
   removeFromCart: (productId: string) => Promise<void>;
+  clearCartError: () => void;
 
   isLoading: (productId: string) => boolean;
   setLoading: (productId: string, value: boolean) => void;
@@ -39,6 +49,9 @@ export const useCartStore = create<CartState>()(
       guestCart: [],
       isAuthenticated: false,
       loading: {},
+      cartError: null,
+
+      clearCartError: () => set({ cartError: null }),
 
       setAuthenticated: async (value) => {
         set({ isAuthenticated: value });
@@ -76,9 +89,10 @@ export const useCartStore = create<CartState>()(
         }
         try {
           const cartProducts = await fetchCartItems();
-          set({ cartProducts });
+          set({ cartProducts, cartError: null });
         } catch (err) {
           console.error("Failed to fetch cart:", err);
+          set({ cartError: cartErrorMessage(err) });
         }
       },
 
@@ -100,9 +114,10 @@ export const useCartStore = create<CartState>()(
         setLoading(product.id, true);
         try {
           const updated = await addCartItem(product.id);
-          set({ cartProducts: updated });
+          set({ cartProducts: updated, cartError: null });
         } catch (err) {
           console.error("Failed to add item:", err);
+          set({ cartError: cartErrorMessage(err) });
         } finally {
           clearLoading(product.id);
         }
@@ -121,9 +136,10 @@ export const useCartStore = create<CartState>()(
         setLoading(productId, true);
         try {
           const updated = await updateCartQuantity(productId, quantity);
-          set({ cartProducts: updated });
+          set({ cartProducts: updated, cartError: null });
         } catch (error) {
           console.error("Failed to update quantity:", error);
+          set({ cartError: cartErrorMessage(error) });
         } finally {
           clearLoading(productId);
         }
@@ -140,9 +156,10 @@ export const useCartStore = create<CartState>()(
         setLoading(productId, true);
         try {
           const updated = await removeCartItem(productId);
-          set({ cartProducts: updated });
+          set({ cartProducts: updated, cartError: null });
         } catch (error) {
           console.error("Failed to remove item:", error);
+          set({ cartError: cartErrorMessage(error) });
         } finally {
           clearLoading(productId);
         }

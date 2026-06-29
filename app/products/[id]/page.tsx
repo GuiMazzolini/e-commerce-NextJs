@@ -5,6 +5,8 @@ import { useCartStore } from "@/app/lib/store/cartStore";
 import { useParams, useRouter } from "next/navigation";
 import Image from "next/image";
 import NotFoundPage from "@/app/not-found";
+import CartErrorBanner from "@/app/components/CartErrorBanner";
+import { Skeleton } from "@/app/components/Skeleton";
 
 type Product = {
   id: string;
@@ -49,14 +51,28 @@ export default function ProductDetailPage() {
 
   if (notFound) return <NotFoundPage />;
   if (!product) return (
-    <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-      <div className="text-gray-500 text-xl">Loading...</div>
+    <div className="min-h-screen bg-gray-50 py-12">
+      <div className="container mx-auto px-4 max-w-6xl">
+        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
+          <div className="flex flex-col lg:flex-row">
+            <div className="lg:w-1/2 p-8 flex items-center justify-center">
+              <Skeleton className="w-full max-w-md aspect-square rounded-xl" />
+            </div>
+            <div className="lg:w-1/2 p-8 lg:p-12 space-y-6">
+              <Skeleton className="h-12 w-3/4" />
+              <Skeleton className="h-10 w-1/4" />
+              <Skeleton className="h-24 w-full" />
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   );
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-6xl">
+        <CartErrorBanner />
         <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
           <div className="flex flex-col lg:flex-row">
             {/* Image Section */}
