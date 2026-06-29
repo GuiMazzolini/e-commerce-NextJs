@@ -3,8 +3,12 @@ import { Product } from "../../product-data";
 const API_BASE_URL =
   process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
 
-async function request(method: string, body?: unknown): Promise<Product[]> {
-  const res = await fetch(`${API_BASE_URL}/api/cart`, {
+async function request(
+  method: string,
+  body?: unknown,
+  path = "/api/cart"
+): Promise<Product[]> {
+  const res = await fetch(`${API_BASE_URL}${path}`, {
     method,
     headers: { "Content-Type": "application/json" },
     body: body ? JSON.stringify(body) : undefined,
@@ -32,4 +36,10 @@ export function updateCartQuantity(productId: string, quantity: number) {
 
 export function removeCartItem(productId: string) {
   return request("DELETE", { productId });
+}
+
+export function mergeGuestCart(
+  items: { productId: string; quantity: number }[]
+) {
+  return request("POST", { items }, "/api/cart/merge");
 }

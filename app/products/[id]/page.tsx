@@ -21,7 +21,7 @@ export default function ProductDetailPage() {
   const [notFound, setNotFound] = useState(false);
   const [buyingNow, setBuyingNow] = useState(false);
 
-  const { cartProducts, addToCart, removeFromCart, fetchCart, isLoading } = useCartStore();
+  const { cartProducts, addToCart, removeFromCart, isLoading } = useCartStore();
   const inCart = cartProducts.some((p) => p.id === id);
   const loading = isLoading(id);
 
@@ -30,7 +30,7 @@ export default function ProductDetailPage() {
     setBuyingNow(true);
     try {
       if (!inCart) {
-        await addToCart(product.id);
+        await addToCart(product);
       }
       router.push("/checkout");
     } finally {
@@ -45,8 +45,6 @@ export default function ProductDetailPage() {
         return res.json();
       })
       .then((data) => data && setProduct(data));
-
-    fetchCart();
   }, [id]);
 
   if (notFound) return <NotFoundPage />;
@@ -99,7 +97,7 @@ export default function ProductDetailPage() {
               {/* Action Buttons */}
               <div className="flex flex-col sm:flex-row gap-4">
                 <button
-                  onClick={() => inCart ? removeFromCart(product.id) : addToCart(product.id)}
+                  onClick={() => inCart ? removeFromCart(product.id) : addToCart(product)}
                   disabled={loading}
                   className={`flex-1 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
                     ${inCart

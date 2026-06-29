@@ -2,18 +2,20 @@ import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/api/auth/[...nextauth]/route";
 import { connectToDB } from "@/app/api/db";
 import ShoppingCartList from "./ShoppingCartList";
-import { redirect } from "next/navigation";
 
 type CartItem = { productId: string; quantity: number };
 type DBProduct = { id: string; name: string; price: number; description: string; imageUrl: string };
 
 export default async function CartPage() {
   const session = await getServerSession(authOptions);
-  if (!session) redirect("/api/auth/signin");
+
+  if (!session?.user?.email) {
+    return <ShoppingCartList initialCartProducts={[]} />;
+  }
 
   const { db } = await connectToDB();
 
-  const cart = await db.collection("carts").findOne({ userId: session.user?.email });
+  const cart = await db.collection("carts").findOne({ userId: session.user.email });
   const items: CartItem[] = cart?.items || [];
 
   let cartProducts: (DBProduct & { quantity: number })[] = [];

@@ -16,15 +16,15 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
   const subtotal = useCartStore((s) => s.getSubtotal());
   const totalItems = useCartStore((s) => s.getTotalItems());
   const setCart = useCartStore((s) => s.setCart);
-  const fetchCart = useCartStore((s) => s.fetchCart);
 
   const shipping = getShippingCost(subtotal);
   const total = getOrderTotal(subtotal);
   const remainingForFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
 
   useEffect(() => {
-    setCart(initialCartProducts);
-    fetchCart();
+    if (initialCartProducts.length > 0) {
+      setCart(initialCartProducts);
+    }
   }, []);
 
   if (cartProducts.length === 0) {

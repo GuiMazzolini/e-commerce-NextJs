@@ -4,7 +4,6 @@ import { Product } from '../product-data';
 import Image from 'next/image';
 import Link from 'next/link';
 import { useCartStore } from '../lib/store/cartStore';
-import { useEffect } from 'react';
 
 export default function ProductsList({ products }: { products: Product[] }) {
   const { cartProducts, addToCart, removeFromCart, isLoading } = useCartStore();
@@ -12,12 +11,6 @@ export default function ProductsList({ products }: { products: Product[] }) {
   function productIsInCart(productId: string) {
     return cartProducts.some((cp) => cp.id === productId);
   };
-
-  const fetchCart = useCartStore((s) => s.fetchCart);
-
-  useEffect(() => {
-    fetchCart();
-  }, []);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -58,7 +51,7 @@ export default function ProductsList({ products }: { products: Product[] }) {
                   onClick={() =>
                     inCart
                       ? removeFromCart(product.id)
-                      : addToCart(product.id)
+                      : addToCart(product)
                   }
                   disabled={loading}
                   className={`
