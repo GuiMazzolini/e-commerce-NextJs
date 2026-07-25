@@ -92,7 +92,12 @@ export async function fulfillCheckoutSession(
     return { paid: false, fulfilled: false };
   }
 
-  const userId = session.client_reference_id || session.metadata?.userId;
+  const userId =
+    session.client_reference_id ||
+    session.metadata?.userId ||
+    session.customer_details?.email ||
+    session.customer_email;
+
   if (!userId || typeof userId !== "string") {
     return { paid: true, fulfilled: false };
   }
@@ -108,6 +113,7 @@ export async function fulfillCheckoutSession(
     await db.collection("orders").insertOne(order);
   }
 
+  // Clears the account cart when present; no-op for guests with no Mongo cart
   await db.collection("carts").updateOne(
     { userId },
     { $set: { items: [], updatedAt: new Date() } }

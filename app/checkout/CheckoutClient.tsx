@@ -2,23 +2,44 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import type { Product } from "@/app/product-data";
 import { getOrderTotal, getShippingCost } from "@/app/lib/shipping";
+import { useCartStore } from "@/app/lib/store/cartStore";
 
 type CheckoutClientProps = {
   initialCartProducts: Product[];
+  isGuest?: boolean;
 };
 
-export default function CheckoutClient({ initialCartProducts }: CheckoutClientProps) {
+export default function CheckoutClient({
+  initialCartProducts,
+  isGuest = false,
+}: CheckoutClientProps) {
+  const router = useRouter();
+  const storeCart = useCartStore((s) => s.cartProducts);
+  const [hydrated, setHydrated] = useState(!isGuest);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const subtotal = initialCartProducts.reduce(
+  useEffect(() => {
+    setHydrated(true);
+  }, []);
+
+  const cartProducts = isGuest ? storeCart : initialCartProducts;
+
+  useEffect(() => {
+    if (isGuest && hydrated && cartProducts.length === 0) {
+      router.replace("/cart");
+    }
+  }, [isGuest, hydrated, cartProducts.length, router]);
+
+  const subtotal = cartProducts.reduce(
     (sum, p) => sum + p.price * (p.quantity || 1),
     0
   );
-  const totalItems = initialCartProducts.reduce((sum, p) => sum + (p.quantity || 1), 0);
+  const totalItems = cartProducts.reduce((sum, p) => sum + (p.quantity || 1), 0);
   const shipping = getShippingCost(subtotal);
   const total = getOrderTotal(subtotal);
 
@@ -29,6 +50,15 @@ export default function CheckoutClient({ initialCartProducts }: CheckoutClientPr
       const res = await fetch("/api/checkout", {
         method: "POST",
         credentials: "include",
+        headers: isGuest ? { "Content-Type": "application/json" } : undefined,
+        body: isGuest
+          ? JSON.stringify({
+              items: cartProducts.map((p) => ({
+                productId: p.id,
+                quantity: p.quantity || 1,
+              })),
+            })
+          : undefined,
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
@@ -47,17 +77,32 @@ export default function CheckoutClient({ initialCartProducts }: CheckoutClientPr
     }
   }
 
+  if (isGuest && !hydrated) {
+    return (
+      <div className="min-h-screen bg-gray-50 py-12">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <p className="text-gray-600">Loading checkout…</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (cartProducts.length === 0) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 py-12">
       <div className="container mx-auto px-4 max-w-6xl">
         <h1 className="text-4xl font-bold text-gray-900 mb-2">Checkout</h1>
         <p className="text-gray-600 mb-8">
           Review your order, then continue to secure payment with Stripe.
+          {isGuest && " You can pay as a guest — Stripe will collect your email."}
         </p>
 
         <div className="grid lg:grid-cols-3 gap-8">
           <div className="lg:col-span-2 space-y-4">
-            {initialCartProducts.map((product) => (
+            {cartProducts.map((product) => (
               <div
                 key={product.id}
                 className="bg-white rounded-xl shadow-md p-4 flex gap-4 items-center"

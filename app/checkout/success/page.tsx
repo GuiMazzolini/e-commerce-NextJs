@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { fulfillCheckoutSession } from "@/app/lib/orders";
+import ClearCartOnSuccess from "./ClearCartOnSuccess";
 
 type Props = {
   searchParams: Promise<{ session_id?: string }>;
@@ -20,6 +21,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
+      <ClearCartOnSuccess paid={paid} />
       <div className="container mx-auto px-4 max-w-lg">
         <div className="bg-white rounded-2xl shadow-lg p-10 text-center">
           <h1 className="text-3xl font-bold text-gray-900 mb-4">

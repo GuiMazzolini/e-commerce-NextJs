@@ -1,6 +1,6 @@
 import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/auth";
 import { connectToDB } from "@/app/api/db";
 import { redirect } from "next/navigation";
 import CheckoutClient from "./CheckoutClient";
@@ -21,12 +21,15 @@ type DBProduct = {
 
 export default async function CheckoutPage() {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    redirect("/api/auth/signin?callbackUrl=/checkout");
+  const email = session?.user?.email ?? null;
+
+  // Guests hydrate from the client cart store; logged-in users use Mongo.
+  if (!email) {
+    return <CheckoutClient initialCartProducts={[]} isGuest />;
   }
 
   const { db } = await connectToDB();
-  const cart = await db.collection("carts").findOne({ userId: session.user.email });
+  const cart = await db.collection("carts").findOne({ userId: email });
   const items: CartItem[] = cart?.items || [];
 
   if (items.length === 0) {

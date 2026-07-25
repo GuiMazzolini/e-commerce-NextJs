@@ -1,14 +1,15 @@
 import Link from "next/link";
 import Image from "next/image";
+import { SEED_PRODUCTS } from "./lib/seed-products";
 
 export default function LandingPage() {
   return (
     <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-r from-blue-600 to-purple-600 opacity-10"></div>
+        <div className="absolute inset-0 bg-linear-to-r from-blue-600 to-purple-600 opacity-10 pointer-events-none"></div>
         
-        <div className="container mx-auto px-4 py-20 lg:py-32">
+        <div className="relative z-10 container mx-auto px-4 py-20 lg:py-32">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
             {/* Left Content */}
             <div className="text-center lg:text-left space-y-8">              
@@ -59,7 +60,7 @@ export default function LandingPage() {
             
             {/* Right Image */}
             <div className="relative">
-              <div className="absolute -inset-4 bg-linear-to-r from-blue-600 to-purple-600 rounded-3xl opacity-20 blur-2xl"></div>
+              <div className="absolute -inset-4 bg-linear-to-r from-blue-600 to-purple-600 rounded-3xl opacity-20 blur-2xl pointer-events-none"></div>
               <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden p-8">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="space-y-4">
@@ -139,7 +140,7 @@ export default function LandingPage() {
       </section>
 
       {/* Featured Products */}
-      <section id="featured" className="py-20 bg-gray-50">
+      <section id="featured" className="scroll-mt-20 py-20 bg-gray-50">
         <div className="container mx-auto px-4">
           <div className="text-center mb-16">
             <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Products</h2>
@@ -149,29 +150,24 @@ export default function LandingPage() {
           </div>
           
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {[
-              { name: 'Hat', image: 'hat.jpg' },
-              { name: 'Mug', image: 'mug.jpg' },
-              { name: 'Shirt', image: 'shirt.jpg' },
-              { name: 'Apron', image: 'apron.jpg' },
-            ].map((product) => (
+            {SEED_PRODUCTS.slice(0, 4).map((product) => (
               <Link 
-                key={product.name}
-                href="/products"
+                key={product.id}
+                href={`/products/${product.id}`}
                 className="group relative overflow-hidden rounded-2xl aspect-square bg-gray-200 hover:shadow-xl transition-all hover:-translate-y-2"
               >
                 <Image
-                  src={`/${product.image}`}
+                  src={`/${product.imageUrl}`}
                   alt={product.name}
                   fill
                   className="object-cover transition-transform group-hover:scale-105"
                   sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                 />
-                <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent"></div>
-                <div className="absolute bottom-0 left-0 right-0 p-6">
+                <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent pointer-events-none"></div>
+                <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
                   <h3 className="text-2xl font-bold text-white mb-2">{product.name}</h3>
                   <p className="text-white/80 text-sm group-hover:translate-x-2 transition-transform">
-                    Shop now →
+                    ${product.price} →
                   </p>
                 </div>
               </Link>

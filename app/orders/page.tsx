@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/auth";
 import { connectToDB } from "@/app/api/db";
 import type { Order, OrderItem, ShippingAddress } from "@/app/lib/orders";
 import { redirect } from "next/navigation";
@@ -47,7 +47,7 @@ function toOrder(doc: Record<string, unknown>): Order {
 export default async function OrdersPage() {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
-    redirect("/api/auth/signin?callbackUrl=/orders");
+    redirect("/login?callbackUrl=/orders");
   }
 
   const { db } = await connectToDB();

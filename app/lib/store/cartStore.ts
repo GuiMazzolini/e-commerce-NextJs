@@ -28,6 +28,7 @@ interface CartState {
 
   setAuthenticated: (value: boolean) => Promise<void>;
   setCart: (products: Product[]) => void;
+  clearGuestCart: () => void;
   fetchCart: () => Promise<void>;
   addToCart: (product: Product) => Promise<void>;
   updateQuantity: (productId: string, quantity: number) => Promise<void>;
@@ -81,6 +82,8 @@ export const useCartStore = create<CartState>()(
       },
 
       setCart: (products) => set({ cartProducts: products }),
+
+      clearGuestCart: () => set({ guestCart: [], cartProducts: [] }),
 
       fetchCart: async () => {
         if (!get().isAuthenticated) {

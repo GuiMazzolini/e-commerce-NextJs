@@ -9,14 +9,14 @@ A portfolio-ready e-commerce app with product browsing, authenticated cart manag
 - **Framework:** Next.js 16 (App Router), React 19, TypeScript
 - **Styling:** Tailwind CSS v4
 - **Database:** MongoDB
-- **Auth:** NextAuth.js (GitHub & Google OAuth)
+- **Auth:** NextAuth.js (email/password + GitHub & Google OAuth)
 - **Payments:** Stripe Checkout (hosted) + webhooks
 - **State:** Zustand
 
 ## Features
 
 - Product catalog with detail pages
-- User authentication via GitHub or Google
+- User authentication via email/password, GitHub, or Google
 - Persistent shopping cart (per user, stored in MongoDB)
 - Stripe Checkout with server-validated line items
 - Webhook clears cart after successful payment
@@ -49,9 +49,15 @@ cp .env.example .env.local
 
 See `.env.example` for the full list. At minimum you need MongoDB credentials, NextAuth secret + OAuth keys, and Stripe keys.
 
-### 3. Seed products (if your database is empty)
+### 3. Seed products
 
-Insert product documents into the `products` collection in the `ecommerce-nextjs` database. Each document needs: `id`, `name`, `price`, `description`, `imageUrl` (filename in `public/`, e.g. `hat.jpg`).
+Populate the database with sample products (hat, mug, shirt, apron):
+
+```bash
+npm run seed
+```
+
+Requires MongoDB credentials in `.env.local`. Safe to re-run — it upserts by product `id`.
 
 ### 4. Run locally
 
@@ -108,6 +114,7 @@ app/
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
+| `npm run seed` | Seed sample products into MongoDB |
 
 ## Author
 

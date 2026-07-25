@@ -64,14 +64,14 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
 
         {isGuest && (
           <p className="mb-6 rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
-            You&apos;re shopping as a guest.{" "}
+            You&apos;re shopping as a guest — you can checkout without an account.{" "}
             <Link
-              href="/api/auth/signin?callbackUrl=/cart"
+              href="/login?callbackUrl=/cart"
               className="font-semibold underline hover:text-amber-900"
             >
-              Sign in
+              Log in
             </Link>{" "}
-            to save your cart across devices and complete checkout.
+            to save your cart across devices and view order history.
           </p>
         )}
 
@@ -116,10 +116,10 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
               </div>
 
               <Link
-                href={isGuest ? "/api/auth/signin?callbackUrl=/checkout" : "/checkout"}
+                href="/checkout"
                 className="block text-center w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg mb-4"
               >
-                {isGuest ? "Sign in to Checkout" : "Proceed to Checkout"}
+                Proceed to Checkout
               </Link>
 
               <Link

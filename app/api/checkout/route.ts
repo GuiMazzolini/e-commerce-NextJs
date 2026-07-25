@@ -1,7 +1,7 @@
 import { connectToDB } from "@/app/api/db";
-import { authOptions } from "@/app/api/auth/[...nextauth]/route";
+import { authOptions } from "@/app/lib/auth";
 import { getServerSession } from "next-auth";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { getAppUrl, getStripe } from "@/app/lib/stripe";
 import { getShippingCost } from "@/app/lib/shipping";
 
@@ -14,7 +14,28 @@ type DBProduct = {
   imageUrl: string;
 };
 
-async function buildCartProducts(db: Awaited<ReturnType<typeof connectToDB>>["db"], items: CartItem[]) {
+function parseGuestItems(body: unknown): CartItem[] | null {
+  if (!body || typeof body !== "object" || !("items" in body)) return null;
+  const items = (body as { items: unknown }).items;
+  if (!Array.isArray(items) || items.length === 0) return null;
+
+  const parsed: CartItem[] = [];
+  for (const item of items) {
+    if (!item || typeof item !== "object") return null;
+    const { productId, quantity } = item as Record<string, unknown>;
+    if (typeof productId !== "string" || !productId) return null;
+    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1) {
+      return null;
+    }
+    parsed.push({ productId, quantity: Math.min(quantity, 99) });
+  }
+  return parsed;
+}
+
+async function buildCartProducts(
+  db: Awaited<ReturnType<typeof connectToDB>>["db"],
+  items: CartItem[]
+) {
   if (!items.length) return [];
   const productIds = items.map((i) => i.productId);
   const productDocs = await db
@@ -30,15 +51,31 @@ async function buildCartProducts(db: Awaited<ReturnType<typeof connectToDB>>["db
     .filter(Boolean) as (DBProduct & { quantity: number })[];
 }
 
-export async function POST() {
+export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
-  if (!session?.user?.email) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  }
+  const email = session?.user?.email ?? null;
 
   const { db } = await connectToDB();
-  const cart = await db.collection("carts").findOne({ userId: session.user.email });
-  const cartProducts = await buildCartProducts(db, cart?.items || []);
+
+  let items: CartItem[] = [];
+  if (email) {
+    const cart = await db.collection("carts").findOne({ userId: email });
+    items = cart?.items || [];
+  } else {
+    let body: unknown = null;
+    try {
+      body = await req.json();
+    } catch {
+      return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
+    }
+    const guestItems = parseGuestItems(body);
+    if (!guestItems) {
+      return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+    }
+    items = guestItems;
+  }
+
+  const cartProducts = await buildCartProducts(db, items);
 
   if (cartProducts.length === 0) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -91,11 +128,16 @@ export async function POST() {
     ],
     success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
     cancel_url: `${origin}/checkout`,
-    client_reference_id: session.user.email,
-    customer_email: session.user.email,
-    metadata: {
-      userId: session.user.email,
-    },
+    ...(email
+      ? {
+          client_reference_id: email,
+          customer_email: email,
+          metadata: { userId: email },
+        }
+      : {
+          // Stripe collects email; fulfillment uses customer_details.email
+          metadata: { isGuest: "true" },
+        }),
   });
 
   if (!checkoutSession.url) {
