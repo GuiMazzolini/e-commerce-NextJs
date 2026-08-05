@@ -2,8 +2,10 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/auth";
 import { connectToDB } from "@/app/api/db";
+import { getAvailableStock } from "@/app/lib/cart-limits";
 import { redirect } from "next/navigation";
 import CheckoutClient from "./CheckoutClient";
+import type { Product } from "@/app/product-data";
 
 export const metadata: Metadata = {
   title: "Checkout",
@@ -11,19 +13,11 @@ export const metadata: Metadata = {
 };
 
 type CartItem = { productId: string; quantity: number };
-type DBProduct = {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  imageUrl: string;
-};
 
 export default async function CheckoutPage() {
   const session = await getServerSession(authOptions);
   const email = session?.user?.email ?? null;
 
-  // Guests hydrate from the client cart store; logged-in users use Mongo.
   if (!email) {
     return <CheckoutClient initialCartProducts={[]} isGuest />;
   }
@@ -44,7 +38,16 @@ export default async function CheckoutPage() {
 
   const cartProducts = items
     .map((item) => {
-      const product = productDocs.find((p: DBProduct) => p.id === item.productId);
+      const product = productDocs.find(
+        (p: {
+          id: string;
+          name: string;
+          price: number;
+          description: string;
+          imageUrl: string;
+          stock?: number;
+        }) => p.id === item.productId
+      );
       if (!product) return null;
       return {
         id: product.id,
@@ -52,10 +55,11 @@ export default async function CheckoutPage() {
         price: product.price,
         description: product.description,
         imageUrl: product.imageUrl,
+        stock: getAvailableStock(product.stock),
         quantity: item.quantity,
       };
     })
-    .filter(Boolean) as (DBProduct & { quantity: number })[];
+    .filter(Boolean) as Product[];
 
   if (cartProducts.length === 0) {
     redirect("/cart");

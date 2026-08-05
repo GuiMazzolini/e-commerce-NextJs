@@ -1,5 +1,6 @@
 import { connectToDB } from "@/app/api/db";
 import { authOptions } from "@/app/lib/auth";
+import { clampCartQuantity, getAvailableStock } from "@/app/lib/cart-limits";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -10,6 +11,7 @@ type DBProduct = {
   price: number;
   description: string;
   imageUrl: string;
+  stock?: number;
 };
 
 async function buildCartProducts(
@@ -33,6 +35,7 @@ async function buildCartProducts(
         price: product.price,
         description: product.description,
         imageUrl: product.imageUrl,
+        stock: getAvailableStock(product.stock),
         quantity: item.quantity,
       };
     })
@@ -75,11 +78,20 @@ export async function POST(req: NextRequest) {
     .collection("products")
     .find({ id: { $in: productIds } })
     .toArray();
-  const validIds = new Set(productDocs.map((p: DBProduct) => p.id));
+  const productsById = new Map<string, DBProduct>(
+    productDocs.map((p: DBProduct) => [p.id, p])
+  );
 
-  const mergedItems: CartItem[] = [...quantities.entries()]
-    .filter(([productId]) => validIds.has(productId))
-    .map(([productId, quantity]) => ({ productId, quantity }));
+  const mergedItems: CartItem[] = [];
+  for (const [productId, rawQty] of quantities.entries()) {
+    const product = productsById.get(productId);
+    if (!product) continue;
+    const stock = getAvailableStock(product.stock);
+    const quantity = clampCartQuantity(rawQty, stock);
+    if (quantity >= 1) {
+      mergedItems.push({ productId, quantity });
+    }
+  }
 
   await db.collection("carts").updateOne(
     { userId },

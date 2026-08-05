@@ -1,7 +1,10 @@
 import { Product } from "../../product-data";
 
-const API_BASE_URL =
-  process.env.NEXT_PUBLIC_API_URL || "http://localhost:3000";
+/**
+ * Same-origin by default so production never hits localhost.
+ * Override only when the API is hosted on a different origin.
+ */
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "";
 
 export class CartRequestError extends Error {
   status: number;

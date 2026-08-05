@@ -4,6 +4,7 @@ import GitHub from "next-auth/providers/github";
 import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { connectToDB } from "@/app/api/db";
+import { isAdminEmail } from "@/app/lib/admin";
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -54,6 +55,18 @@ export const authOptions: NextAuthOptions = {
   },
   session: {
     strategy: "jwt",
+  },
+  callbacks: {
+    async jwt({ token }) {
+      token.isAdmin = isAdminEmail(token.email as string | undefined);
+      return token;
+    },
+    async session({ session, token }) {
+      if (session.user) {
+        session.user.isAdmin = !!token.isAdmin;
+      }
+      return session;
+    },
   },
   secret: process.env.NEXTAUTH_SECRET,
 };

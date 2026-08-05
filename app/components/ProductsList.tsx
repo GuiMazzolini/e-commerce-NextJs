@@ -1,10 +1,10 @@
-'use client';
+"use client";
 
-import { Product } from '../product-data';
-import Image from 'next/image';
-import Link from 'next/link';
-import { useCartStore } from '../lib/store/cartStore';
-import CartErrorBanner from './CartErrorBanner';
+import { Product } from "../product-data";
+import Image from "next/image";
+import Link from "next/link";
+import { useCartStore } from "../lib/store/cartStore";
+import CartErrorBanner from "./CartErrorBanner";
 
 export default function ProductsList({ products }: { products: Product[] }) {
   const { cartProducts, addToCart, updateQuantity, isLoading } = useCartStore();
@@ -26,6 +26,8 @@ export default function ProductsList({ products }: { products: Product[] }) {
             const inCart = !!entry;
             const quantity = entry?.quantity || 0;
             const loading = isLoading(product.id);
+            const outOfStock = product.stock < 1;
+            const atStockLimit = quantity >= product.stock;
 
             return (
               <div key={product.id} className="group">
@@ -38,6 +40,11 @@ export default function ProductsList({ products }: { products: Product[] }) {
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
+                      {outOfStock && (
+                        <span className="absolute left-3 top-3 rounded-md bg-red-600 px-2 py-1 text-xs font-semibold text-white">
+                          Out of stock
+                        </span>
+                      )}
                     </div>
 
                     <div className="p-4">
@@ -45,9 +52,16 @@ export default function ProductsList({ products }: { products: Product[] }) {
                         {product.name}
                       </h2>
 
-                      <span className="text-2xl font-bold text-blue-600">
-                        ${product.price}
-                      </span>
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-2xl font-bold text-blue-600">
+                          ${product.price.toFixed(2)}
+                        </span>
+                        {!outOfStock && (
+                          <span className="text-xs text-gray-500">
+                            {product.stock} left
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </Link>
@@ -57,25 +71,35 @@ export default function ProductsList({ products }: { products: Product[] }) {
                     <button
                       onClick={() => updateQuantity(product.id, quantity - 1)}
                       disabled={loading}
-                      aria-label={quantity <= 1 ? 'Remove from cart' : 'Decrease quantity'}
+                      aria-label={quantity <= 1 ? "Remove from cart" : "Decrease quantity"}
                       className="px-4 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                     >
                       {quantity <= 1 ? (
-                        <svg className="w-4 h-4 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                        <svg
+                          className="w-4 h-4 text-red-600"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                          <path
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                            strokeWidth={2}
+                            d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                          />
                         </svg>
                       ) : (
-                        '−'
+                        "−"
                       )}
                     </button>
 
                     <span className="font-semibold min-w-8 text-center">
-                      {loading ? '...' : quantity}
+                      {loading ? "..." : quantity}
                     </span>
 
                     <button
                       onClick={() => updateQuantity(product.id, quantity + 1)}
-                      disabled={loading}
+                      disabled={loading || atStockLimit}
                       aria-label="Increase quantity"
                       className="px-4 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                     >
@@ -85,15 +109,19 @@ export default function ProductsList({ products }: { products: Product[] }) {
                 ) : (
                   <button
                     onClick={() => addToCart(product)}
-                    disabled={loading}
+                    disabled={loading || outOfStock}
                     className={`
                       w-full mt-3 py-2 rounded-lg font-semibold
                       transition-all duration-200
-                      bg-blue-600 text-white hover:bg-blue-700
-                      ${loading && 'opacity-50 cursor-not-allowed'}
+                      ${
+                        outOfStock
+                          ? "bg-gray-200 text-gray-500 cursor-not-allowed"
+                          : "bg-blue-600 text-white hover:bg-blue-700"
+                      }
+                      ${loading && "opacity-50 cursor-not-allowed"}
                     `}
                   >
-                    {loading ? 'Adding...' : 'Add to Cart'}
+                    {loading ? "Adding..." : outOfStock ? "Out of Stock" : "Add to Cart"}
                   </button>
                 )}
               </div>

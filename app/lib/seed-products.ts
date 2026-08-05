@@ -8,6 +8,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'Cozy heavyweight navy hoodie with a brushed fleece interior and our signature circuit-robot chest print. Kangaroo pocket, ribbed cuffs, and a lined hood for those late-night debugging sessions.',
     imageUrl: 'hoodie.jpg',
+    stock: 25,
   },
   {
     id: 'stickers',
@@ -16,6 +17,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'Ten weatherproof, scratch-resistant vinyl stickers featuring our robot mascot in every mood plus retro circuit-board art. Perfect for laptops, water bottles, and hardware cases.',
     imageUrl: 'stickers.jpg',
+    stock: 100,
   },
   {
     id: 'bottle',
@@ -24,6 +26,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'Matte-black double-walled stainless steel bottle that keeps drinks cold for 24 hours or hot for 12. Leak-proof lid and a laser-etched mascot logo that never fades.',
     imageUrl: 'bottle.jpg',
+    stock: 40,
   },
   {
     id: 'tote',
@@ -32,6 +35,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'Sturdy natural-canvas tote with reinforced straps and a roomy interior. Carries your laptop, dev boards, and groceries in equal style.',
     imageUrl: 'tote.jpg',
+    stock: 50,
   },
   {
     id: 'notebook',
@@ -40,6 +44,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'A5 hardcover journal with 192 dotted pages, an elastic closure, ribbon bookmark, and a deep-blue cover embossed with gold circuit foil. Ideal for sketches, schematics, and standup notes.',
     imageUrl: 'notebook.jpg',
+    stock: 60,
   },
   {
     id: 'pins',
@@ -48,6 +53,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'A trio of hard-enamel pins — the RoboBuddy mascot, a mini circuit board, and a lightning bolt — with rubber clutch backs. Pin them to bags, jackets, or lanyards.',
     imageUrl: 'pins.jpg',
+    stock: 75,
   },
   {
     id: 'hat',
@@ -56,6 +62,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'A lightweight, breathable canvas cap with an adjustable strap and embroidered mascot patch. Perfect for sunny days and outdoor meetups.',
     imageUrl: 'hat.jpg',
+    stock: 30,
   },
   {
     id: 'mug',
@@ -64,6 +71,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'A sturdy 12oz ceramic mug with a comfortable handle. Microwave- and dishwasher-safe for your daily dose of caffeine-driven development.',
     imageUrl: 'mug.jpg',
+    stock: 45,
   },
   {
     id: 'shirt',
@@ -72,6 +80,7 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'Soft, pre-shrunk ring-spun cotton tee with a relaxed fit and a front mascot print. A wardrobe staple that pairs with anything.',
     imageUrl: 'shirt.jpg',
+    stock: 10,
   },
   {
     id: 'apron',
@@ -80,5 +89,6 @@ export const SEED_PRODUCTS: Product[] = [
     description:
       'Durable cotton apron with front pockets and an adjustable neck strap. Keeps you clean while you cook up something great.',
     imageUrl: 'apron.jpg',
+    stock: 20,
   },
 ];

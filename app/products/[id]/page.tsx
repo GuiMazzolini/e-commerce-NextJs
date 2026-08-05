@@ -1,154 +1,68 @@
-"use client";
+import type { Metadata } from "next";
+import { notFound } from "next/navigation";
+import { connectToDB } from "@/app/api/db";
+import { getAvailableStock } from "@/app/lib/cart-limits";
+import ProductDetail from "./ProductDetail";
 
-import { useEffect, useState } from "react";
-import { useCartStore } from "@/app/lib/store/cartStore";
-import { useParams, useRouter } from "next/navigation";
-import Image from "next/image";
-import NotFoundPage from "@/app/not-found";
-import CartErrorBanner from "@/app/components/CartErrorBanner";
-import { Skeleton } from "@/app/components/Skeleton";
+type Params = { id: string };
 
-type Product = {
+type DBProduct = {
   id: string;
   name: string;
   price: number;
   description: string;
   imageUrl: string;
+  stock: number;
 };
 
-export default function ProductDetailPage() {
-  const { id } = useParams<{ id: string }>();
-  const router = useRouter();
-  const [product, setProduct] = useState<Product | null>(null);
-  const [notFound, setNotFound] = useState(false);
-  const [buyingNow, setBuyingNow] = useState(false);
+async function getProduct(id: string): Promise<DBProduct | null> {
+  const { db } = await connectToDB();
+  const product = await db.collection("products").findOne({ id });
+  if (!product) return null;
 
-  const { cartProducts, addToCart, removeFromCart, isLoading } = useCartStore();
-  const inCart = cartProducts.some((p) => p.id === id);
-  const loading = isLoading(id);
+  return {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    description: product.description,
+    imageUrl: product.imageUrl,
+    stock: getAvailableStock(product.stock),
+  };
+}
 
-  async function handleBuyNow() {
-    if (!product) return;
-    setBuyingNow(true);
-    try {
-      if (!inCart) {
-        await addToCart(product);
-      }
-      router.push("/checkout");
-    } finally {
-      setBuyingNow(false);
-    }
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<Params>;
+}): Promise<Metadata> {
+  const { id } = await params;
+  const product = await getProduct(id);
+  if (!product) {
+    return { title: "Product not found" };
   }
 
-  useEffect(() => {
-    fetch(`/api/products/${id}`)
-      .then((res) => {
-        if (!res.ok) { setNotFound(true); return null; }
-        return res.json();
-      })
-      .then((data) => data && setProduct(data));
-  }, [id]);
+  return {
+    title: product.name,
+    description: product.description,
+    openGraph: {
+      title: product.name,
+      description: product.description,
+      images: product.imageUrl ? [`/${product.imageUrl}`] : undefined,
+    },
+  };
+}
 
-  if (notFound) return <NotFoundPage />;
-  if (!product) return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="flex flex-col lg:flex-row">
-            <div className="lg:w-1/2 p-8 flex items-center justify-center">
-              <Skeleton className="w-full max-w-md aspect-square rounded-xl" />
-            </div>
-            <div className="lg:w-1/2 p-8 lg:p-12 space-y-6">
-              <Skeleton className="h-12 w-3/4" />
-              <Skeleton className="h-10 w-1/4" />
-              <Skeleton className="h-24 w-full" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+export default async function ProductDetailPage({
+  params,
+}: {
+  params: Promise<Params>;
+}) {
+  const { id } = await params;
+  const product = await getProduct(id);
 
-  return (
-    <div className="min-h-screen bg-gray-50 py-12">
-      <div className="container mx-auto px-4 max-w-6xl">
-        <CartErrorBanner />
-        <div className="bg-white rounded-2xl shadow-xl overflow-hidden">
-          <div className="flex flex-col lg:flex-row">
-            {/* Image Section */}
-            <div className="lg:w-1/2 p-8 bg-gray-100 flex items-center justify-center">
-              <div className="relative w-full aspect-square max-w-md">
-                <Image
-                  src={'/' + product.imageUrl}
-                  alt={product.name}
-                  fill
-                  className="object-cover rounded-xl"
-                />
-              </div>
-            </div>
+  if (!product) {
+    notFound();
+  }
 
-            {/* Content Section */}
-            <div className="lg:w-1/2 p-8 lg:p-12 flex flex-col justify-center">
-              <div className="mb-6">
-                <h1 className="text-4xl lg:text-5xl font-bold text-gray-900 mb-4">
-                  {product.name}
-                </h1>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold text-blue-600">
-                    ${product.price}
-                  </span>
-                  <span className="text-gray-500 text-sm">USD</span>
-                </div>
-              </div>
-
-              <div className="border-t border-gray-200 pt-6 mb-8">
-                <h2 className="text-xl font-semibold text-gray-900 mb-3">
-                  Description
-                </h2>
-                <p className="text-gray-700 leading-relaxed text-lg">
-                  {product.description}
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex flex-col sm:flex-row gap-4">
-                <button
-                  onClick={() => inCart ? removeFromCart(product.id) : addToCart(product)}
-                  disabled={loading}
-                  className={`flex-1 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 shadow-md hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed
-                    ${inCart
-                      ? 'bg-red-100 text-red-700 hover:bg-red-200'
-                      : 'bg-blue-600 text-white hover:bg-blue-700'
-                    }`}
-                >
-                  {loading ? '...' : inCart ? 'Remove from Cart' : 'Add to Cart'}
-                </button>
-                <button
-                  onClick={handleBuyNow}
-                  disabled={loading || buyingNow}
-                  className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {buyingNow ? "Processing..." : "Buy Now"}
-                </button>
-              </div>
-
-              {/* Additional Info */}
-              <div className="mt-8 pt-8 border-t border-gray-200">
-                <div className="grid grid-cols-2 gap-4 text-sm text-gray-600">
-                  <div>
-                    <span className="block font-semibold text-gray-900">Free Shipping</span>
-                    <span>On orders over $50</span>
-                  </div>
-                  <div>
-                    <span className="block font-semibold text-gray-900">Easy Returns</span>
-                    <span>30-day return policy</span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  );
+  return <ProductDetail product={product} />;
 }

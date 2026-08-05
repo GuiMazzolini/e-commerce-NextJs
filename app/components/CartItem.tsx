@@ -1,8 +1,7 @@
-"use client";
-
 import Link from "next/link";
 import Image from "next/image";
 import { Product } from "../product-data";
+import { MAX_CART_QUANTITY } from "../lib/cart-limits";
 import { useCartStore } from "../lib/store/cartStore";
 
 interface CartItemProps {
@@ -10,14 +9,15 @@ interface CartItemProps {
 }
 
 export default function CartItem({ product }: CartItemProps) {
-    const updateQuantity = useCartStore((s) => s.updateQuantity);
-    const removeFromCart = useCartStore((s) => s.removeFromCart);
-    const isLoading = useCartStore((s) => s.isLoading);
+  const updateQuantity = useCartStore((s) => s.updateQuantity);
+  const removeFromCart = useCartStore((s) => s.removeFromCart);
+  const isLoading = useCartStore((s) => s.isLoading);
 
-    const loading = isLoading(product.id);
-
-    const quantity = product.quantity || 1;
-
+  const loading = isLoading(product.id);
+  const quantity = product.quantity || 1;
+  const stock =
+    typeof product.stock === "number" ? product.stock : MAX_CART_QUANTITY;
+  const atLimit = quantity >= Math.min(MAX_CART_QUANTITY, stock);
 
   return (
     <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-lg transition-shadow">
@@ -42,9 +42,24 @@ export default function CartItem({ product }: CartItemProps) {
               </h3>
             </Link>
 
-            <p className="text-gray-600 text-sm line-clamp-2 mb-4">
+            <p className="text-gray-600 text-sm line-clamp-2 mb-2">
               {product.description}
             </p>
+            {typeof product.stock === "number" && (
+              <p
+                className={`text-xs mb-4 ${
+                  product.stock < 1
+                    ? "text-red-600"
+                    : quantity > product.stock
+                      ? "text-amber-600"
+                      : "text-gray-500"
+                }`}
+              >
+                {product.stock < 1
+                  ? "Out of stock"
+                  : `${product.stock} available`}
+              </p>
+            )}
           </div>
 
           <div className="flex items-center justify-between flex-wrap gap-4">
@@ -67,8 +82,18 @@ export default function CartItem({ product }: CartItemProps) {
                     aria-label="Remove from cart"
                     className="px-3 py-2 text-red-600 hover:bg-red-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors flex items-center justify-center"
                   >
-                    <svg className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                    <svg
+                      className="w-5 h-5"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"
+                      />
                     </svg>
                   </button>
                 ) : (
@@ -87,10 +112,8 @@ export default function CartItem({ product }: CartItemProps) {
                 </span>
 
                 <button
-                  onClick={() =>
-                    updateQuantity(product.id, quantity + 1)
-                  }
-                  disabled={loading}
+                  onClick={() => updateQuantity(product.id, quantity + 1)}
+                  disabled={loading || atLimit}
                   aria-label="Increase quantity"
                   className="px-3 py-2 hover:bg-gray-100 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
                 >

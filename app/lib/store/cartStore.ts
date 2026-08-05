@@ -9,12 +9,14 @@ import {
   mergeGuestCart,
   CartRequestError,
 } from "../api/cart";
+import { clampCartQuantity, MAX_CART_QUANTITY } from "../cart-limits";
 
 type LoadingMap = Record<string, boolean>;
 
 function cartErrorMessage(err: unknown): string {
-  if (err instanceof CartRequestError && err.status === 401) {
-    return "Please sign in to update your cart.";
+  if (err instanceof CartRequestError) {
+    if (err.status === 401) return "Please sign in to update your cart.";
+    if (err.status === 409) return "Not enough stock for that quantity.";
   }
   return "Could not update your cart. Please try again.";
 }
@@ -101,15 +103,34 @@ export const useCartStore = create<CartState>()(
 
       addToCart: async (product) => {
         if (!get().isAuthenticated) {
+          const stock = typeof product.stock === "number" ? product.stock : 0;
+          if (stock < 1) {
+            set({ cartError: "This product is out of stock." });
+            return;
+          }
           const current = get().guestCart;
           const index = current.findIndex((p) => p.id === product.id);
+          if (index >= 0 && (current[index].quantity || 1) >= stock) {
+            set({ cartError: `Only ${stock} in stock.` });
+            return;
+          }
           const next =
             index >= 0
               ? current.map((p, i) =>
-                  i === index ? { ...p, quantity: (p.quantity || 1) + 1 } : p
+                  i === index
+                    ? {
+                        ...p,
+                        stock,
+                        quantity: Math.min(
+                          (p.quantity || 1) + 1,
+                          MAX_CART_QUANTITY,
+                          stock
+                        ),
+                      }
+                    : p
                 )
-              : [...current, { ...product, quantity: 1 }];
-          set({ guestCart: next, cartProducts: next });
+              : [...current, { ...product, stock, quantity: 1 }];
+          set({ guestCart: next, cartProducts: next, cartError: null });
           return;
         }
 
@@ -128,10 +149,25 @@ export const useCartStore = create<CartState>()(
 
       updateQuantity: async (productId, quantity) => {
         if (!get().isAuthenticated) {
+          const item = get().guestCart.find((p) => p.id === productId);
+          const stock = typeof item?.stock === "number" ? item.stock : undefined;
+          const clamped = quantity <= 0 ? 0 : clampCartQuantity(quantity, stock);
+          if (quantity > 0 && stock !== undefined && quantity > stock) {
+            set({ cartError: `Only ${stock} in stock.` });
+          }
           const next = get()
-            .guestCart.map((p) => (p.id === productId ? { ...p, quantity } : p))
+            .guestCart.map((p) =>
+              p.id === productId ? { ...p, quantity: clamped } : p
+            )
             .filter((p) => (p.quantity || 0) > 0);
-          set({ guestCart: next, cartProducts: next });
+          set({
+            guestCart: next,
+            cartProducts: next,
+            cartError:
+              quantity > 0 && stock !== undefined && quantity > stock
+                ? `Only ${stock} in stock.`
+                : null,
+          });
           return;
         }
 

@@ -2,7 +2,9 @@ import type { Metadata } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/auth";
 import { connectToDB } from "@/app/api/db";
+import { getAvailableStock } from "@/app/lib/cart-limits";
 import ShoppingCartList from "./ShoppingCartList";
+import type { Product } from "@/app/product-data";
 
 export const metadata: Metadata = {
   title: "Shopping Cart",
@@ -10,7 +12,6 @@ export const metadata: Metadata = {
 };
 
 type CartItem = { productId: string; quantity: number };
-type DBProduct = { id: string; name: string; price: number; description: string; imageUrl: string };
 
 export default async function CartPage() {
   const session = await getServerSession(authOptions);
@@ -24,7 +25,7 @@ export default async function CartPage() {
   const cart = await db.collection("carts").findOne({ userId: session.user.email });
   const items: CartItem[] = cart?.items || [];
 
-  let cartProducts: (DBProduct & { quantity: number })[] = [];
+  let cartProducts: Product[] = [];
 
   if (items.length > 0) {
     const productIds = items.map((i) => i.productId);
@@ -35,7 +36,16 @@ export default async function CartPage() {
 
     cartProducts = items
       .map((item) => {
-        const product = productDocs.find((p: DBProduct) => p.id === item.productId);
+        const product = productDocs.find(
+          (p: {
+            id: string;
+            name: string;
+            price: number;
+            description: string;
+            imageUrl: string;
+            stock?: number;
+          }) => p.id === item.productId
+        );
         if (!product) return null;
         return {
           id: product.id,
@@ -43,10 +53,11 @@ export default async function CartPage() {
           price: product.price,
           description: product.description,
           imageUrl: product.imageUrl,
+          stock: getAvailableStock(product.stock),
           quantity: item.quantity,
         };
       })
-      .filter(Boolean) as (DBProduct & { quantity: number })[];
+      .filter(Boolean) as Product[];
   }
 
   return <ShoppingCartList initialCartProducts={cartProducts} />;

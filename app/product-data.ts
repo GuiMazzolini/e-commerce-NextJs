@@ -4,5 +4,8 @@ export interface Product {
   name: string;
   description: string;
   price: number;
+  /** Units available for sale. */
+  stock: number;
+  /** Cart line quantity (not stored on the product catalog doc). */
   quantity?: number;
 }

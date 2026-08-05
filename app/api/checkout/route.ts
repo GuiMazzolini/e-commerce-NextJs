@@ -4,6 +4,8 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getAppUrl, getStripe } from "@/app/lib/stripe";
 import { getShippingCost } from "@/app/lib/shipping";
+import { clampCartQuantity, getAvailableStock } from "@/app/lib/cart-limits";
+import { encodeCartItemsMetadata } from "@/app/lib/cart-metadata";
 
 type CartItem = { productId: string; quantity: number };
 type DBProduct = {
@@ -12,6 +14,7 @@ type DBProduct = {
   price: number;
   description: string;
   imageUrl: string;
+  stock?: number;
 };
 
 function parseGuestItems(body: unknown): CartItem[] | null {
@@ -24,10 +27,10 @@ function parseGuestItems(body: unknown): CartItem[] | null {
     if (!item || typeof item !== "object") return null;
     const { productId, quantity } = item as Record<string, unknown>;
     if (typeof productId !== "string" || !productId) return null;
-    if (typeof quantity !== "number" || !Number.isInteger(quantity) || quantity < 1) {
-      return null;
-    }
-    parsed.push({ productId, quantity: Math.min(quantity, 99) });
+    if (typeof quantity !== "number" || !Number.isInteger(quantity)) return null;
+    const clamped = clampCartQuantity(quantity);
+    if (clamped < 1) return null;
+    parsed.push({ productId, quantity: clamped });
   }
   return parsed;
 }
@@ -36,19 +39,39 @@ async function buildCartProducts(
   db: Awaited<ReturnType<typeof connectToDB>>["db"],
   items: CartItem[]
 ) {
-  if (!items.length) return [];
+  if (!items.length) return { products: [], stockError: null as string | null };
+
   const productIds = items.map((i) => i.productId);
   const productDocs = await db
     .collection("products")
     .find({ id: { $in: productIds } })
     .toArray();
 
-  return items
-    .map((item) => {
-      const product = productDocs.find((p: DBProduct) => p.id === item.productId);
-      return product ? { ...product, quantity: item.quantity } : null;
-    })
-    .filter(Boolean) as (DBProduct & { quantity: number })[];
+  const products: (DBProduct & { quantity: number; stock: number })[] = [];
+
+  for (const item of items) {
+    const product = productDocs.find((p: DBProduct) => p.id === item.productId);
+    if (!product) continue;
+
+    const stock = getAvailableStock(product.stock);
+    if (item.quantity > stock) {
+      return {
+        products: [],
+        stockError:
+          stock < 1
+            ? `${product.name} is out of stock`
+            : `Only ${stock} of ${product.name} left in stock`,
+      };
+    }
+
+    products.push({
+      ...product,
+      stock,
+      quantity: item.quantity,
+    });
+  }
+
+  return { products, stockError: null };
 }
 
 export async function POST(req: NextRequest) {
@@ -75,7 +98,11 @@ export async function POST(req: NextRequest) {
     items = guestItems;
   }
 
-  const cartProducts = await buildCartProducts(db, items);
+  const { products: cartProducts, stockError } = await buildCartProducts(db, items);
+
+  if (stockError) {
+    return NextResponse.json({ error: stockError }, { status: 409 });
+  }
 
   if (cartProducts.length === 0) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
@@ -107,6 +134,9 @@ export async function POST(req: NextRequest) {
 
   const subtotal = cartProducts.reduce((sum, p) => sum + p.price * p.quantity, 0);
   const shippingCost = getShippingCost(subtotal);
+  const cartItemsMeta = encodeCartItemsMetadata(
+    cartProducts.map((p) => ({ productId: p.id, quantity: p.quantity }))
+  );
 
   const checkoutSession = await stripe.checkout.sessions.create({
     mode: "payment",
@@ -132,11 +162,10 @@ export async function POST(req: NextRequest) {
       ? {
           client_reference_id: email,
           customer_email: email,
-          metadata: { userId: email },
+          metadata: { userId: email, cartItems: cartItemsMeta },
         }
       : {
-          // Stripe collects email; fulfillment uses customer_details.email
-          metadata: { isGuest: "true" },
+          metadata: { isGuest: "true", cartItems: cartItemsMeta },
         }),
   });
 

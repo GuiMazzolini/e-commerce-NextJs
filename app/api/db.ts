@@ -3,6 +3,17 @@ import { MongoClient, ServerApiVersion } from "mongodb";
 let cachedClient: MongoClient | null = null;
 // Typed as `any` so existing dynamic collection access keeps working.
 let cachedDB: any = null;
+let indexesEnsured = false;
+
+async function ensureIndexes(db: any) {
+  if (indexesEnsured) return;
+  // Prevents duplicate orders when webhook + success page fulfill the same session.
+  await db.collection("orders").createIndex(
+    { stripeSessionId: 1 },
+    { unique: true }
+  );
+  indexesEnsured = true;
+}
 
 function getConnectionUri(): string {
   // Prefer a full connection string when provided.
@@ -25,6 +36,7 @@ function getConnectionUri(): string {
 
 export async function connectToDB() {
   if (cachedClient && cachedDB) {
+    await ensureIndexes(cachedDB);
     return { client: cachedClient, db: cachedDB };
   }
 
@@ -41,6 +53,8 @@ export async function connectToDB() {
 
   cachedClient = client;
   cachedDB = client.db(dbName);
+
+  await ensureIndexes(cachedDB);
 
   return { client: cachedClient, db: cachedDB };
 }

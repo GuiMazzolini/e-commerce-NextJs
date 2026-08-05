@@ -1,15 +1,40 @@
 import { connectToDB } from "@/app/api/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/auth";
+import {
+  clampCartQuantity,
+  getAvailableStock,
+  MAX_CART_QUANTITY,
+} from "@/app/lib/cart-limits";
 import { NextRequest, NextResponse } from "next/server";
 
 type CartItem = { productId: string; quantity: number };
-type DBProduct = { id: string; name: string; price: number; description: string; imageUrl: string };
+type DBProduct = {
+  id: string;
+  name: string;
+  price: number;
+  description: string;
+  imageUrl: string;
+  stock?: number;
+};
 
 async function getSession() {
   const session = await getServerSession(authOptions);
   if (!session) return null;
   return session;
+}
+
+function serializeCartProduct(product: DBProduct, quantity: number) {
+  const stock = getAvailableStock(product.stock);
+  return {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    description: product.description,
+    imageUrl: product.imageUrl,
+    stock,
+    quantity,
+  };
 }
 
 async function buildCartProducts(db: any, items: CartItem[]) {
@@ -23,7 +48,8 @@ async function buildCartProducts(db: any, items: CartItem[]) {
   return items
     .map((item) => {
       const product = productDocs.find((p: DBProduct) => p.id === item.productId);
-      return product ? { ...product, quantity: item.quantity } : null;
+      if (!product) return null;
+      return serializeCartProduct(product, item.quantity);
     })
     .filter(Boolean);
 }
@@ -49,16 +75,31 @@ export async function POST(req: NextRequest) {
   const { db } = await connectToDB();
   const userId = session.user?.email;
 
-  const productExists = await db.collection("products").findOne({ id: productId });
-  if (!productExists) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+  const product = await db.collection("products").findOne({ id: productId });
+  if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
-  const cart = await db.collection("carts").findOne({ userId, "items.productId": productId });
+  const stock = getAvailableStock(product.stock);
+  if (stock < 1) {
+    return NextResponse.json({ error: "Out of stock" }, { status: 409 });
+  }
+
+  const cart = await db.collection("carts").findOne({ userId });
+  const existingItem = cart?.items?.find((i: CartItem) => i.productId === productId) as
+    | CartItem
+    | undefined;
 
   let updatedCart;
-  if (cart) {
+  if (existingItem) {
+    if (existingItem.quantity >= stock) {
+      return NextResponse.json(
+        { error: `Only ${stock} in stock` },
+        { status: 409 }
+      );
+    }
+    const nextQuantity = Math.min(existingItem.quantity + 1, MAX_CART_QUANTITY, stock);
     updatedCart = await db.collection("carts").findOneAndUpdate(
       { userId, "items.productId": productId },
-      { $inc: { "items.$.quantity": 1 }, $set: { updatedAt: new Date() } },
+      { $set: { "items.$.quantity": nextQuantity, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
   } else {
@@ -84,7 +125,7 @@ export async function PATCH(req: NextRequest) {
   const { productId, quantity } = await req.json();
   if (!productId || quantity === undefined)
     return NextResponse.json({ error: "productId and quantity are required" }, { status: 400 });
-  if (quantity < 0)
+  if (typeof quantity !== "number" || quantity < 0)
     return NextResponse.json({ error: "quantity cannot be negative" }, { status: 400 });
 
   const { db } = await connectToDB();
@@ -98,9 +139,27 @@ export async function PATCH(req: NextRequest) {
       { returnDocument: "after" }
     );
   } else {
+    const product = await db.collection("products").findOne({ id: productId });
+    if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
+
+    const stock = getAvailableStock(product.stock);
+    const clamped = clampCartQuantity(quantity, stock);
+    if (clamped < 1) {
+      return NextResponse.json(
+        { error: stock < 1 ? "Out of stock" : "quantity must be at least 1" },
+        { status: stock < 1 ? 409 : 400 }
+      );
+    }
+    if (quantity > stock) {
+      return NextResponse.json(
+        { error: `Only ${stock} in stock` },
+        { status: 409 }
+      );
+    }
+
     updatedCart = await db.collection("carts").findOneAndUpdate(
       { userId, "items.productId": productId },
-      { $set: { "items.$.quantity": quantity, updatedAt: new Date() } },
+      { $set: { "items.$.quantity": clamped, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
     if (!updatedCart)

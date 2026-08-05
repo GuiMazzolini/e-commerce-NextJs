@@ -1,16 +1,17 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import { usePathname } from 'next/navigation';
-import { useEffect, useState } from 'react';
-import AuthButton from './AuthButton';
-import { useCartStore } from '../lib/store/cartStore';
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
+import AuthButton from "./AuthButton";
+import { useCartStore } from "../lib/store/cartStore";
 
 const links = [
-  { href: '/products', label: 'Products' },
-  { href: '/cart', label: 'Cart' },
-  { href: '/checkout', label: 'Checkout' },
-  { href: '/orders', label: 'Orders' },
+  { href: "/products", label: "Products" },
+  { href: "/cart", label: "Cart" },
+  { href: "/checkout", label: "Checkout" },
+  { href: "/orders", label: "Orders" },
 ];
 
 function NavLink({
@@ -32,8 +33,8 @@ function NavLink({
       onClick={onClick}
       className={`relative block px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
         active
-          ? 'text-blue-600 bg-blue-50'
-          : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+          ? "text-blue-600 bg-blue-50"
+          : "text-gray-600 hover:text-gray-900 hover:bg-gray-100"
       }`}
     >
       {label}
@@ -49,16 +50,21 @@ function NavLink({
 function MobileNav({
   pathname,
   totalItems,
+  showAdmin,
 }: {
   pathname: string;
   totalItems: number;
+  showAdmin: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const navLinks = showAdmin
+    ? [...links, { href: "/admin/products", label: "Admin" }]
+    : links;
 
   useEffect(() => {
-    document.body.style.overflow = menuOpen ? 'hidden' : '';
+    document.body.style.overflow = menuOpen ? "hidden" : "";
     return () => {
-      document.body.style.overflow = '';
+      document.body.style.overflow = "";
     };
   }, [menuOpen]);
 
@@ -67,7 +73,7 @@ function MobileNav({
       <button
         type="button"
         className="sm:hidden flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-        aria-label={menuOpen ? 'Close menu' : 'Open menu'}
+        aria-label={menuOpen ? "Close menu" : "Open menu"}
         aria-expanded={menuOpen}
         onClick={() => setMenuOpen((open) => !open)}
       >
@@ -92,13 +98,15 @@ function MobileNav({
           />
           <div className="sm:hidden fixed left-0 right-0 top-16 border-t border-gray-200 bg-white shadow-lg z-40">
             <ul className="container mx-auto px-4 py-3 space-y-1">
-              {links.map((link) => (
+              {navLinks.map((link) => (
                 <li key={link.href}>
                   <NavLink
                     href={link.href}
                     label={link.label}
-                    active={pathname === link.href}
-                    badge={link.href === '/cart' ? totalItems : undefined}
+                    active={
+                      pathname === link.href || pathname.startsWith(link.href + "/")
+                    }
+                    badge={link.href === "/cart" ? totalItems : undefined}
                     onClick={() => setMenuOpen(false)}
                   />
                 </li>
@@ -113,7 +121,12 @@ function MobileNav({
 
 export default function NavBar() {
   const pathname = usePathname();
+  const { data: session } = useSession();
   const totalItems = useCartStore((s) => s.getTotalItems());
+  const showAdmin = !!session?.user?.isAdmin;
+  const navLinks = showAdmin
+    ? [...links, { href: "/admin/products", label: "Admin" }]
+    : links;
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
@@ -128,13 +141,15 @@ export default function NavBar() {
         </Link>
 
         <ul className="hidden sm:flex items-center gap-1">
-          {links.map((link) => (
+          {navLinks.map((link) => (
             <li key={link.href}>
               <NavLink
                 href={link.href}
                 label={link.label}
-                active={pathname === link.href}
-                badge={link.href === '/cart' ? totalItems : undefined}
+                active={
+                  pathname === link.href || pathname.startsWith(link.href + "/")
+                }
+                badge={link.href === "/cart" ? totalItems : undefined}
               />
             </li>
           ))}
@@ -161,7 +176,12 @@ export default function NavBar() {
             )}
           </Link>
           <AuthButton />
-          <MobileNav key={pathname} pathname={pathname} totalItems={totalItems} />
+          <MobileNav
+            key={pathname}
+            pathname={pathname}
+            totalItems={totalItems}
+            showAdmin={showAdmin}
+          />
         </div>
       </div>
     </nav>

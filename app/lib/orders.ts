@@ -1,6 +1,7 @@
-import type Stripe from "stripe";
 import { connectToDB } from "@/app/api/db";
 import { getStripe } from "@/app/lib/stripe";
+import { decodeCartItemsMetadata } from "@/app/lib/cart-metadata";
+import type Stripe from "stripe";
 
 export type OrderItem = {
   name: string;
@@ -34,6 +35,15 @@ export type Order = {
 
 function centsToDollars(cents: number | null | undefined): number {
   return (cents ?? 0) / 100;
+}
+
+function isDuplicateKeyError(err: unknown): boolean {
+  return (
+    typeof err === "object" &&
+    err !== null &&
+    "code" in err &&
+    (err as { code: number }).code === 11000
+  );
 }
 
 export function buildOrderFromStripeSession(
@@ -75,10 +85,28 @@ export function buildOrderFromStripeSession(
   };
 }
 
+async function decrementStockForSession(
+  db: Awaited<ReturnType<typeof connectToDB>>["db"],
+  session: Stripe.Checkout.Session
+) {
+  const cartItems = decodeCartItemsMetadata(session.metadata?.cartItems);
+  for (const item of cartItems) {
+    const result = await db.collection("products").updateOne(
+      { id: item.productId, stock: { $gte: item.quantity } },
+      { $inc: { stock: -item.quantity } }
+    );
+    // If stock raced to zero after payment, keep the paid order; stock just won't go negative.
+    if (result.modifiedCount === 0) {
+      console.warn(
+        `Stock decrement skipped for ${item.productId} x${item.quantity} (session ${session.id})`
+      );
+    }
+  }
+}
+
 /**
- * Idempotently fulfills a paid Checkout Session: saves the order (once) and
- * empties the user's cart. Safe to call from both the Stripe webhook and the
- * success page, so fulfillment works even if the webhook hasn't been received.
+ * Idempotently fulfills a paid Checkout Session: saves the order (once),
+ * decrements stock (once), and empties the user's cart.
  */
 export async function fulfillCheckoutSession(
   sessionId: string
@@ -103,17 +131,21 @@ export async function fulfillCheckoutSession(
   }
 
   const { db } = await connectToDB();
+  const order = buildOrderFromStripeSession(session, userId);
 
-  const existingOrder = await db
-    .collection("orders")
-    .findOne({ stripeSessionId: session.id });
-
-  if (!existingOrder) {
-    const order = buildOrderFromStripeSession(session, userId);
+  let inserted = false;
+  try {
     await db.collection("orders").insertOne(order);
+    inserted = true;
+  } catch (err) {
+    if (!isDuplicateKeyError(err)) throw err;
   }
 
-  // Clears the account cart when present; no-op for guests with no Mongo cart
+  // Only the first successful insert adjusts inventory.
+  if (inserted) {
+    await decrementStockForSession(db, session);
+  }
+
   await db.collection("carts").updateOne(
     { userId },
     { $set: { items: [], updatedAt: new Date() } }
