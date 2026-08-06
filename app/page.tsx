@@ -62,21 +62,19 @@ async function getHomeProducts(): Promise<HomeProduct[]> {
       .find({})
       .sort({ name: 1 })
       .limit(8)
-      .toArray();
+      .toArray() as unknown as Array<{
+      id: string;
+      name: string;
+      price: number;
+      imageUrl: string;
+    }>;
 
-    return docs.map(
-      (doc: {
-        id: string;
-        name: string;
-        price: number;
-        imageUrl: string;
-      }) => ({
-        id: doc.id,
-        name: doc.name,
-        price: doc.price,
-        imageUrl: doc.imageUrl,
-      })
-    );
+    return docs.map((doc) => ({
+      id: doc.id,
+      name: doc.name,
+      price: doc.price,
+      imageUrl: doc.imageUrl,
+    }));
   } catch {
     return [];
   }
@@ -167,6 +165,7 @@ export default async function LandingPage() {
                             src={getImageSrc(heroProducts[0].imageUrl)}
                             alt={heroProducts[0].name}
                             fill
+                            unoptimized
                             className="object-cover"
                             sizes="(max-width: 1024px) 50vw, 25vw"
                             priority
@@ -182,6 +181,7 @@ export default async function LandingPage() {
                             src={getImageSrc(heroProducts[1].imageUrl)}
                             alt={heroProducts[1].name}
                             fill
+                            unoptimized
                             className="object-cover"
                             sizes="(max-width: 1024px) 50vw, 25vw"
                           />
@@ -198,6 +198,7 @@ export default async function LandingPage() {
                             src={getImageSrc(heroProducts[2].imageUrl)}
                             alt={heroProducts[2].name}
                             fill
+                            unoptimized
                             className="object-cover"
                             sizes="(max-width: 1024px) 50vw, 25vw"
                           />
@@ -212,6 +213,7 @@ export default async function LandingPage() {
                             src={getImageSrc(heroProducts[3].imageUrl)}
                             alt={heroProducts[3].name}
                             fill
+                            unoptimized
                             className="object-cover"
                             sizes="(max-width: 1024px) 50vw, 25vw"
                           />
@@ -310,6 +312,7 @@ export default async function LandingPage() {
                       src={getImageSrc(product.imageUrl)}
                       alt={product.name}
                       fill
+                      unoptimized
                       className="object-cover transition-transform group-hover:scale-105"
                       sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                     />

@@ -113,6 +113,7 @@ export default function CheckoutClient({
                     src={getImageSrc(product.imageUrl)}
                     alt={product.name}
                     fill
+                    unoptimized
                     className="object-cover"
                     sizes="96px"
                   />

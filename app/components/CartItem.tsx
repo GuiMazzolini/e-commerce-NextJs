@@ -31,6 +31,7 @@ export default function CartItem({ product }: CartItemProps) {
             src={getImageSrc(product.imageUrl)}
             alt={product.name}
             fill
+            unoptimized
             className="object-cover hover:scale-105 transition-transform duration-300"
           />
         </Link>

@@ -51,6 +51,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                   alt={product.name}
                   fill
                   className="object-cover rounded-xl"
+                  unoptimized
                   priority
                 />
               </div>

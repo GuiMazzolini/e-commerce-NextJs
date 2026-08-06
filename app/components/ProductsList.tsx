@@ -39,6 +39,7 @@ export default function ProductsList({ products }: { products: Product[] }) {
                         src={getImageSrc(product.imageUrl)}
                         alt={product.name}
                         fill
+                        unoptimized
                         className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                       {outOfStock && (

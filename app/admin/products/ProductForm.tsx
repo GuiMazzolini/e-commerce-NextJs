@@ -212,6 +212,7 @@ export default function ProductForm({
                 alt={name || "Product preview"}
                 fill
                 className="object-cover"
+                unoptimized
                 sizes="128px"
               />
             </div>

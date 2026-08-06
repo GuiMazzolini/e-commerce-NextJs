@@ -54,6 +54,7 @@ export default async function AdminProductsPage() {
                         src={getImageSrc(product.imageUrl)}
                         alt=""
                         fill
+                        unoptimized
                         className="object-cover"
                         sizes="48px"
                       />
