@@ -2,47 +2,18 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/auth";
-import { connectToDB } from "@/app/api/db";
-import type { Order, OrderItem, ShippingAddress } from "@/app/lib/orders";
+import { getOrdersForUser, type Order } from "@/app/lib/orders";
 import { redirect } from "next/navigation";
+import {
+  formatOrderDate,
+  OrderItems,
+  OrderShipping,
+  OrderTotals,
+} from "./order-ui";
 
 export const metadata: Metadata = {
   title: "Order History",
 };
-
-function formatDate(date: Date | string): string {
-  return new Intl.DateTimeFormat("en-US", {
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(date));
-}
-
-function formatAddress(address: ShippingAddress): string {
-  const parts = [
-    address.line1,
-    address.line2,
-    [address.city, address.state].filter(Boolean).join(", "),
-    address.postalCode,
-    address.country,
-  ].filter(Boolean);
-  return parts.join("\n");
-}
-
-function toOrder(doc: Record<string, unknown>): Order {
-  return {
-    stripeSessionId: String(doc.stripeSessionId),
-    userId: String(doc.userId),
-    customerEmail: doc.customerEmail ? String(doc.customerEmail) : null,
-    items: Array.isArray(doc.items) ? (doc.items as Order["items"]) : [],
-    subtotal: Number(doc.subtotal),
-    shippingCost: Number(doc.shippingCost),
-    total: Number(doc.total),
-    currency: String(doc.currency ?? "usd"),
-    shippingAddress: (doc.shippingAddress as ShippingAddress | null) ?? null,
-    status: "paid",
-    createdAt: new Date(doc.createdAt as string | Date),
-  };
-}
 
 export default async function OrdersPage() {
   const session = await getServerSession(authOptions);
@@ -50,16 +21,7 @@ export default async function OrdersPage() {
     redirect("/login?callbackUrl=/orders");
   }
 
-  const { db } = await connectToDB();
-  const orderDocs = await db
-    .collection("orders")
-    .find({ userId: session.user.email })
-    .sort({ createdAt: -1 })
-    .toArray();
-
-  const orders: Order[] = orderDocs.map((doc: Record<string, unknown>) =>
-    toOrder(doc)
-  );
+  const orders: Order[] = await getOrdersForUser(session.user.email);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -90,7 +52,9 @@ export default async function OrdersPage() {
                 <div className="flex flex-wrap items-center justify-between gap-3 border-b border-gray-100 px-6 py-4 bg-gray-50">
                   <div>
                     <p className="text-sm text-gray-500">Order placed</p>
-                    <p className="font-semibold text-gray-900">{formatDate(order.createdAt)}</p>
+                    <p className="font-semibold text-gray-900">
+                      {formatOrderDate(order.createdAt)}
+                    </p>
                   </div>
                   <div className="text-right">
                     <p className="text-sm text-gray-500">Total</p>
@@ -99,51 +63,18 @@ export default async function OrdersPage() {
                 </div>
 
                 <div className="px-6 py-5 space-y-4">
-                  <ul className="divide-y divide-gray-100">
-                    {order.items.map((item: OrderItem, index: number) => (
-                      <li
-                        key={`${order.stripeSessionId}-${index}`}
-                        className="flex justify-between py-3 text-sm"
-                      >
-                        <span className="text-gray-900">
-                          {item.name}{" "}
-                          <span className="text-gray-500">× {item.quantity}</span>
-                        </span>
-                        <span className="font-medium text-gray-900">
-                          ${(item.unitAmount * item.quantity).toFixed(2)}
-                        </span>
-                      </li>
-                    ))}
-                  </ul>
+                  <OrderItems order={order} />
+                  <OrderTotals order={order} />
+                  <OrderShipping order={order} />
 
-                  <div className="border-t border-gray-100 pt-4 space-y-1 text-sm text-gray-600">
-                    <div className="flex justify-between">
-                      <span>Subtotal</span>
-                      <span>${order.subtotal.toFixed(2)}</span>
-                    </div>
-                    <div className="flex justify-between">
-                      <span>Shipping</span>
-                      <span>
-                        {order.shippingCost === 0
-                          ? "FREE"
-                          : `$${order.shippingCost.toFixed(2)}`}
-                      </span>
-                    </div>
+                  <div className="border-t border-gray-100 pt-4">
+                    <Link
+                      href={`/orders/${order.stripeSessionId}`}
+                      className="font-semibold text-blue-600 hover:text-blue-700"
+                    >
+                      View order details →
+                    </Link>
                   </div>
-
-                  {order.shippingAddress && (
-                    <div className="border-t border-gray-100 pt-4">
-                      <p className="text-sm font-semibold text-gray-900 mb-1">
-                        Shipped to
-                      </p>
-                      {order.shippingAddress.name && (
-                        <p className="text-sm text-gray-700">{order.shippingAddress.name}</p>
-                      )}
-                      <p className="text-sm text-gray-600 whitespace-pre-line">
-                        {formatAddress(order.shippingAddress)}
-                      </p>
-                    </div>
-                  )}
                 </div>
               </article>
             ))}

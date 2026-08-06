@@ -9,6 +9,9 @@ type Props = {
 export default async function CheckoutSuccessPage({ searchParams }: Props) {
   const { session_id } = await searchParams;
   let paid = false;
+  const lookupHref = session_id
+    ? `/orders/lookup?order=${encodeURIComponent(session_id)}`
+    : "/orders/lookup";
 
   if (session_id) {
     try {
@@ -40,6 +43,14 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
           >
             Continue shopping
           </Link>
+          <div className="mt-4">
+            <Link
+              href={lookupHref}
+              className="font-semibold text-blue-600 hover:text-blue-700"
+            >
+              Look up this order
+            </Link>
+          </div>
         </div>
       </div>
     </div>

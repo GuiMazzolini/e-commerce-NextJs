@@ -34,6 +34,22 @@ export type Order = {
   createdAt: Date;
 };
 
+export function toOrder(doc: Record<string, unknown>): Order {
+  return {
+    stripeSessionId: String(doc.stripeSessionId),
+    userId: String(doc.userId),
+    customerEmail: doc.customerEmail ? String(doc.customerEmail) : null,
+    items: Array.isArray(doc.items) ? (doc.items as Order["items"]) : [],
+    subtotal: Number(doc.subtotal),
+    shippingCost: Number(doc.shippingCost),
+    total: Number(doc.total),
+    currency: String(doc.currency ?? "usd"),
+    shippingAddress: (doc.shippingAddress as ShippingAddress | null) ?? null,
+    status: "paid",
+    createdAt: new Date(doc.createdAt as string | Date),
+  };
+}
+
 function centsToDollars(cents: number | null | undefined): number {
   return (cents ?? 0) / 100;
 }
@@ -103,6 +119,55 @@ async function decrementStockForSession(
       );
     }
   }
+}
+
+export async function getOrdersForUser(email: string): Promise<Order[]> {
+  const { db } = await connectToDB();
+  const orderDocs = await db
+    .collection("orders")
+    .find({ userId: email })
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return orderDocs.map((doc: Record<string, unknown>) => toOrder(doc));
+}
+
+export async function getOrderBySessionId(
+  sessionId: string
+): Promise<Order | null> {
+  const { db } = await connectToDB();
+  const orderDoc = await db
+    .collection("orders")
+    .findOne({ stripeSessionId: sessionId });
+
+  if (!orderDoc) return null;
+  return toOrder(orderDoc as Record<string, unknown>);
+}
+
+export async function getAccessibleOrder({
+  sessionId,
+  sessionEmail,
+  guestEmail,
+}: {
+  sessionId: string;
+  sessionEmail?: string | null;
+  guestEmail?: string | null;
+}): Promise<Order | null> {
+  const order = await getOrderBySessionId(sessionId);
+  if (!order) return null;
+
+  if (sessionEmail && order.userId === sessionEmail) {
+    return order;
+  }
+
+  if (
+    guestEmail &&
+    order.customerEmail?.toLowerCase() === guestEmail.toLowerCase()
+  ) {
+    return order;
+  }
+
+  return null;
 }
 
 /**
