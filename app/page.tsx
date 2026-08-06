@@ -2,12 +2,56 @@ import Link from "next/link";
 import Image from "next/image";
 import { connectToDB } from "@/app/api/db";
 
+const GITHUB_URL = "https://github.com/GuiMazzolini/e-commerce-NextJs";
+
 type HomeProduct = {
   id: string;
   name: string;
   price: number;
   imageUrl: string;
 };
+
+const highlights = [
+  {
+    title: "Guest checkout",
+    description: "Buy without an account. Stripe collects email and shipping securely.",
+  },
+  {
+    title: "Inventory-aware",
+    description: "Stock is validated in cart and checkout, then decremented after payment.",
+  },
+  {
+    title: "Admin-ready",
+    description: "Protected product CRUD so shop owners can manage catalog and stock.",
+  },
+];
+
+const caseStudyPoints = [
+  {
+    title: "Server-trusted commerce",
+    body: "Prices, stock, and line items are built on the server from MongoDB — never from client cart state alone.",
+  },
+  {
+    title: "Reliable fulfillment",
+    body: "Stripe webhooks plus a success-page fallback, unique order IDs, and idempotent inventory updates.",
+  },
+  {
+    title: "Built for real clients",
+    body: "Auth, guest carts, order history, confirmation emails, and an admin panel you can extend for each project.",
+  },
+];
+
+const stack = [
+  "Next.js 16",
+  "React 19",
+  "TypeScript",
+  "MongoDB",
+  "NextAuth",
+  "Stripe",
+  "Zustand",
+  "Tailwind CSS",
+  "Resend",
+];
 
 async function getHomeProducts(): Promise<HomeProduct[]> {
   try {
@@ -47,70 +91,80 @@ export default async function LandingPage() {
   const featured = products.slice(0, 4);
 
   return (
-    <div className="min-h-screen bg-linear-to-b from-blue-50 to-white">
-      <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-linear-to-r from-blue-600 to-purple-600 opacity-10 pointer-events-none"></div>
+    <div className="min-h-screen bg-stone-50 text-stone-900">
+      {/* Hero */}
+      <section className="relative overflow-hidden border-b border-stone-200 bg-white">
+        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(37,99,235,0.08),transparent_45%),radial-gradient(circle_at_bottom_left,rgba(15,23,42,0.05),transparent_40%)] pointer-events-none" />
 
-        <div className="relative z-10 container mx-auto px-4 py-20 lg:py-32">
+        <div className="relative container mx-auto px-4 py-16 lg:py-24">
           <div className="grid lg:grid-cols-2 gap-12 items-center">
-            <div className="text-center lg:text-left space-y-8">
-              <h1 className="text-5xl lg:text-7xl font-bold text-gray-900 leading-tight">
-                Discover Your
-                <span className="block text-transparent bg-clip-text bg-linear-to-r from-blue-600 to-purple-600">
-                  Perfect Style
-                </span>
-              </h1>
-
-              <p className="text-xl text-gray-600 max-w-xl">
-                Explore our curated collection of premium products designed to
-                elevate your everyday life. Quality meets affordability.
-              </p>
-
-              <div className="flex flex-col sm:flex-row gap-4 justify-center lg:justify-start">
-                <Link
-                  href="/products"
-                  className="group px-8 py-4 bg-blue-600 text-white rounded-lg font-semibold text-lg hover:bg-blue-700 transition-all shadow-lg hover:shadow-xl hover:-translate-y-1"
-                >
-                  Shop Now
-                  <span className="inline-block ml-2 group-hover:translate-x-1 transition-transform">
-                    →
-                  </span>
-                </Link>
-
-                <Link
-                  href="#featured"
-                  className="px-8 py-4 bg-white text-gray-900 rounded-lg font-semibold text-lg border-2 border-gray-200 hover:border-blue-600 transition-all"
-                >
-                  View Collection
-                </Link>
+            <div className="space-y-8">
+              <div className="inline-flex items-center gap-2 rounded-full border border-stone-200 bg-stone-50 px-4 py-1.5 text-sm text-stone-600">
+                <span className="h-2 w-2 rounded-full bg-emerald-500" />
+                Full-stack e-commerce portfolio project
               </div>
 
-              <div className="grid grid-cols-3 gap-8 pt-8 border-t border-gray-200">
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">Secure</div>
-                  <div className="text-sm text-gray-600">Stripe Checkout</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">OAuth</div>
-                  <div className="text-sm text-gray-600">GitHub &amp; Google</div>
-                </div>
-                <div>
-                  <div className="text-2xl font-bold text-gray-900">Free</div>
-                  <div className="text-sm text-gray-600">Shipping over $50</div>
-                </div>
+              <div className="space-y-4">
+                <h1 className="text-4xl sm:text-5xl lg:text-6xl font-bold tracking-tight leading-[1.05]">
+                  StyleShop
+                  <span className="block text-stone-500 text-2xl sm:text-3xl lg:text-4xl font-semibold mt-3">
+                    A production-style storefront you can explore end to end
+                  </span>
+                </h1>
+                <p className="text-lg text-stone-600 max-w-xl leading-relaxed">
+                  Browse products, manage a cart, checkout as a guest or signed-in
+                  user, and receive order confirmation — built to show how I ship
+                  real commerce features for freelance clients.
+                </p>
+              </div>
+
+              <div className="flex flex-col sm:flex-row gap-3">
+                <Link
+                  href="/products"
+                  className="inline-flex items-center justify-center rounded-xl bg-stone-900 px-6 py-3.5 text-white font-semibold hover:bg-stone-800 transition-colors"
+                >
+                  Explore the shop
+                </Link>
+                <Link
+                  href="#case-study"
+                  className="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-6 py-3.5 font-semibold hover:border-stone-400 transition-colors"
+                >
+                  View case study
+                </Link>
+                <a
+                  href={GITHUB_URL}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="inline-flex items-center justify-center rounded-xl border border-stone-300 bg-white px-6 py-3.5 font-semibold hover:border-stone-400 transition-colors"
+                >
+                  GitHub
+                </a>
+              </div>
+
+              <div className="grid sm:grid-cols-3 gap-4 pt-4">
+                {highlights.map((item) => (
+                  <div
+                    key={item.title}
+                    className="rounded-2xl border border-stone-200 bg-stone-50 p-4"
+                  >
+                    <p className="font-semibold text-stone-900">{item.title}</p>
+                    <p className="mt-1 text-sm text-stone-600 leading-relaxed">
+                      {item.description}
+                    </p>
+                  </div>
+                ))}
               </div>
             </div>
 
             <div className="relative">
-              <div className="absolute -inset-4 bg-linear-to-r from-blue-600 to-purple-600 rounded-3xl opacity-20 blur-2xl pointer-events-none"></div>
-              <div className="relative bg-white rounded-3xl shadow-2xl overflow-hidden p-8">
+              <div className="rounded-4xl border border-stone-200 bg-white p-6 shadow-[0_20px_60px_rgba(15,23,42,0.08)]">
                 {heroProducts.length > 0 ? (
                   <div className="grid grid-cols-2 gap-4">
                     <div className="space-y-4">
                       {heroProducts[0] && (
                         <Link
                           href={`/products/${heroProducts[0].id}`}
-                          className="relative block aspect-square rounded-2xl overflow-hidden bg-gray-100"
+                          className="relative block aspect-square rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
                             src={productImageSrc(heroProducts[0].imageUrl)}
@@ -125,7 +179,7 @@ export default async function LandingPage() {
                       {heroProducts[1] && (
                         <Link
                           href={`/products/${heroProducts[1].id}`}
-                          className="relative block aspect-4/3 rounded-2xl overflow-hidden bg-gray-100"
+                          className="relative block aspect-4/3 rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
                             src={productImageSrc(heroProducts[1].imageUrl)}
@@ -141,7 +195,7 @@ export default async function LandingPage() {
                       {heroProducts[2] && (
                         <Link
                           href={`/products/${heroProducts[2].id}`}
-                          className="relative block aspect-4/3 rounded-2xl overflow-hidden bg-gray-100"
+                          className="relative block aspect-4/3 rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
                             src={productImageSrc(heroProducts[2].imageUrl)}
@@ -155,7 +209,7 @@ export default async function LandingPage() {
                       {heroProducts[3] && (
                         <Link
                           href={`/products/${heroProducts[3].id}`}
-                          className="relative block aspect-square rounded-2xl overflow-hidden bg-gray-100"
+                          className="relative block aspect-square rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
                             src={productImageSrc(heroProducts[3].imageUrl)}
@@ -169,15 +223,8 @@ export default async function LandingPage() {
                     </div>
                   </div>
                 ) : (
-                  <div className="aspect-square rounded-2xl bg-gray-100 flex items-center justify-center text-gray-500 text-center p-6">
-                    <div>
-                      <p className="font-semibold text-gray-700 mb-2">
-                        No products yet
-                      </p>
-                      <Link href="/products" className="text-blue-600 hover:underline">
-                        Browse the shop
-                      </Link>
-                    </div>
+                  <div className="aspect-square rounded-2xl bg-stone-100 flex items-center justify-center text-center p-8 text-stone-500">
+                    Seed products to preview the live catalog collage.
                   </div>
                 )}
               </div>
@@ -186,88 +233,93 @@ export default async function LandingPage() {
         </div>
       </section>
 
-      <section className="py-20 bg-white">
+      {/* Case study */}
+      <section id="case-study" className="scroll-mt-20 py-20 bg-stone-50">
         <div className="container mx-auto px-4">
-          <div className="text-center mb-16">
-            <h2 className="text-4xl font-bold text-gray-900 mb-4">Why Shop With Us</h2>
-            <p className="text-xl text-gray-600 max-w-2xl mx-auto">
-              We&apos;re committed to providing the best shopping experience
+          <div className="max-w-3xl mb-12">
+            <p className="text-sm font-semibold uppercase tracking-[0.18em] text-blue-700 mb-3">
+              Case study
+            </p>
+            <h2 className="text-3xl sm:text-4xl font-bold tracking-tight mb-4">
+              Built like a client project, not a toy demo
+            </h2>
+            <p className="text-lg text-stone-600 leading-relaxed">
+              StyleShop demonstrates the full purchase journey — catalog, cart,
+              authentication, payments, inventory, admin, and post-purchase email —
+              with the kind of guardrails you want before going live.
             </p>
           </div>
 
-          <div className="grid md:grid-cols-3 gap-8">
-            <div className="text-center p-8 rounded-2xl hover:bg-gray-50 transition-colors">
-              <div className="w-16 h-16 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
+          <div className="grid lg:grid-cols-3 gap-6 mb-12">
+            {caseStudyPoints.map((point) => (
+              <div
+                key={point.title}
+                className="rounded-2xl border border-stone-200 bg-white p-6 shadow-sm"
+              >
+                <h3 className="text-xl font-semibold mb-3">{point.title}</h3>
+                <p className="text-stone-600 leading-relaxed">{point.body}</p>
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Premium Quality</h3>
-              <p className="text-gray-600">
-                Carefully curated products that meet our high standards for quality and durability
-              </p>
-            </div>
+            ))}
+          </div>
 
-            <div className="text-center p-8 rounded-2xl hover:bg-gray-50 transition-colors">
-              <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z"
-                  />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Best Prices</h3>
-              <p className="text-gray-600">
-                Competitive pricing with regular deals and promotions to save you money
-              </p>
+          <div className="rounded-2xl border border-stone-200 bg-white p-6 sm:p-8">
+            <h3 className="text-lg font-semibold mb-4">Stack</h3>
+            <div className="flex flex-wrap gap-2">
+              {stack.map((item) => (
+                <span
+                  key={item}
+                  className="rounded-full bg-stone-100 px-3 py-1.5 text-sm font-medium text-stone-700"
+                >
+                  {item}
+                </span>
+              ))}
             </div>
-
-            <div className="text-center p-8 rounded-2xl hover:bg-gray-50 transition-colors">
-              <div className="w-16 h-16 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-6">
-                <svg className="w-8 h-8 text-purple-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-                </svg>
-              </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-3">Fast Shipping</h3>
-              <p className="text-gray-600">
-                Free shipping on orders over $50 with quick delivery to your doorstep
-              </p>
-            </div>
+            <p className="mt-6 text-sm text-stone-500 leading-relaxed">
+              Payments run through Stripe test mode in this demo. Order confirmation
+              emails are sent via Resend when configured.
+            </p>
           </div>
         </div>
       </section>
 
+      {/* Featured products */}
       {featured.length > 0 && (
-        <section id="featured" className="scroll-mt-20 py-20 bg-gray-50">
+        <section id="featured" className="scroll-mt-20 py-20 bg-white border-y border-stone-200">
           <div className="container mx-auto px-4">
-            <div className="text-center mb-16">
-              <h2 className="text-4xl font-bold text-gray-900 mb-4">Featured Products</h2>
-              <p className="text-xl text-gray-600">A peek at what&apos;s in the shop</p>
+            <div className="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4 mb-10">
+              <div>
+                <h2 className="text-3xl font-bold tracking-tight">Live catalog</h2>
+                <p className="mt-2 text-stone-600">
+                  Products loaded from MongoDB — same data used across shop and admin.
+                </p>
+              </div>
+              <Link
+                href="/products"
+                className="font-semibold text-blue-700 hover:text-blue-800"
+              >
+                View all products →
+              </Link>
             </div>
 
-            <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
               {featured.map((product) => (
                 <Link
                   key={product.id}
                   href={`/products/${product.id}`}
-                  className="group relative overflow-hidden rounded-2xl aspect-square bg-gray-200 hover:shadow-xl transition-all hover:-translate-y-2"
+                  className="group overflow-hidden rounded-2xl border border-stone-200 bg-white hover:shadow-lg transition-all"
                 >
-                  <Image
-                    src={productImageSrc(product.imageUrl)}
-                    alt={product.name}
-                    fill
-                    className="object-cover transition-transform group-hover:scale-105"
-                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                  />
-                  <div className="absolute inset-0 bg-linear-to-t from-black/60 to-transparent pointer-events-none"></div>
-                  <div className="absolute bottom-0 left-0 right-0 p-6 pointer-events-none">
-                    <h3 className="text-2xl font-bold text-white mb-2">{product.name}</h3>
-                    <p className="text-white/80 text-sm group-hover:translate-x-2 transition-transform">
-                      ${product.price.toFixed(2)} →
-                    </p>
+                  <div className="relative aspect-square bg-stone-100">
+                    <Image
+                      src={productImageSrc(product.imageUrl)}
+                      alt={product.name}
+                      fill
+                      className="object-cover transition-transform group-hover:scale-105"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <h3 className="font-semibold text-stone-900">{product.name}</h3>
+                    <p className="mt-1 text-stone-600">${product.price.toFixed(2)}</p>
                   </div>
                 </Link>
               ))}
@@ -276,32 +328,32 @@ export default async function LandingPage() {
         </section>
       )}
 
-      <section className="py-20 bg-linear-to-r from-blue-600 to-purple-600">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6">
-            Ready to Start Shopping?
+      {/* CTA */}
+      <section className="py-20 bg-stone-900 text-white">
+        <div className="container mx-auto px-4 text-center max-w-3xl">
+          <h2 className="text-3xl sm:text-4xl font-bold mb-4">
+            Want a storefront like this for your business?
           </h2>
-          <p className="text-xl text-blue-100 mb-8 max-w-2xl mx-auto">
-            Join thousands of happy customers and find your perfect products today
+          <p className="text-lg text-stone-300 mb-8 leading-relaxed">
+            This project is a working reference for how I approach e-commerce:
+            polished UX, secure checkout, and maintainable admin workflows.
           </p>
-          <Link
-            href="/products"
-            className="inline-block px-10 py-5 bg-white text-blue-600 rounded-lg font-semibold text-lg hover:bg-gray-100 transition-all shadow-xl hover:shadow-2xl hover:-translate-y-1"
-          >
-            Browse All Products
-          </Link>
-        </div>
-      </section>
-
-      <section className="py-16 bg-white border-t border-gray-200">
-        <div className="container mx-auto px-4 text-center">
-          <p className="text-gray-600">
-            Secure payments powered by{" "}
-            <span className="font-semibold text-gray-900">Stripe</span>
-          </p>
-          <p className="text-sm text-gray-400 mt-2">
-            Cards are processed in test mode for this demo.
-          </p>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <Link
+              href="/products"
+              className="inline-flex items-center justify-center rounded-xl bg-white px-6 py-3.5 font-semibold text-stone-900 hover:bg-stone-100 transition-colors"
+            >
+              Try the demo shop
+            </Link>
+            <a
+              href={GITHUB_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center justify-center rounded-xl border border-stone-600 px-6 py-3.5 font-semibold hover:bg-stone-800 transition-colors"
+            >
+              Inspect the code
+            </a>
+          </div>
         </div>
       </section>
     </div>

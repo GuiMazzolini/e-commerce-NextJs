@@ -29,7 +29,7 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
           </h1>
           <p className="text-gray-600 mb-8">
             {paid
-              ? "Your order was received. You will get a confirmation from Stripe by email."
+              ? "Your order was received. A StyleShop confirmation email is on its way (plus Stripe's receipt)."
               : session_id
                 ? "We could not confirm this payment. If you were charged, contact support with your session details."
                 : "Return to the store to complete a purchase."}

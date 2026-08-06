@@ -1,4 +1,5 @@
 import { connectToDB } from "@/app/api/db";
+import { sendOrderConfirmationEmail } from "@/app/lib/email";
 import { getStripe } from "@/app/lib/stripe";
 import { decodeCartItemsMetadata } from "@/app/lib/cart-metadata";
 import type Stripe from "stripe";
@@ -141,9 +142,10 @@ export async function fulfillCheckoutSession(
     if (!isDuplicateKeyError(err)) throw err;
   }
 
-  // Only the first successful insert adjusts inventory.
+  // Only the first successful insert adjusts inventory and sends email.
   if (inserted) {
     await decrementStockForSession(db, session);
+    await sendOrderConfirmationEmail(order);
   }
 
   await db.collection("carts").updateOne(

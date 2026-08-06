@@ -5,15 +5,15 @@ import Providers from './providers';
 
 export const metadata: Metadata = {
   title: {
-    default: 'StyleShop — Modern E-commerce Demo',
+    default: 'StyleShop — Full-Stack E-commerce Case Study',
     template: '%s | StyleShop',
   },
   description:
-    'A full-stack e-commerce demo built with Next.js, MongoDB, NextAuth, and Stripe Checkout. Browse products, manage a cart, and pay securely.',
+    'A production-style e-commerce demo built with Next.js, MongoDB, Stripe, and Resend. Explore guest checkout, inventory, admin, and order confirmation email.',
   openGraph: {
-    title: 'StyleShop — Modern E-commerce Demo',
+    title: 'StyleShop — Full-Stack E-commerce Case Study',
     description:
-      'A full-stack e-commerce demo built with Next.js, MongoDB, NextAuth, and Stripe Checkout.',
+      'A production-style e-commerce demo built with Next.js, MongoDB, Stripe, and Resend.',
     type: 'website',
   },
 };

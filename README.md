@@ -19,6 +19,9 @@ A portfolio-ready e-commerce app with product browsing, authenticated cart manag
 - User authentication via email/password, GitHub, or Google
 - Persistent shopping cart (per user, stored in MongoDB)
 - Stripe Checkout with server-validated line items
+- Guest checkout without account creation
+- Inventory stock checks and admin product management
+- Order confirmation emails via Resend
 - Webhook clears cart after successful payment
 - Responsive UI with sticky navbar and cart badge
 
@@ -47,7 +50,7 @@ Copy the example file and fill in your values:
 cp .env.example .env.local
 ```
 
-See `.env.example` for the full list. At minimum you need MongoDB credentials, NextAuth secret + OAuth keys, and Stripe keys.
+See `.env.example` for the full list. At minimum you need MongoDB credentials, NextAuth secret + OAuth keys, and Stripe keys. Optional: `RESEND_API_KEY` for order confirmation emails.
 
 ### 3. Seed products
 
