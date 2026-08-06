@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import Image from "next/image";
-import { FormEvent, useState } from "react";
+import { FormEvent, useMemo, useState } from "react";
 import { getImageSrc } from "@/app/lib/images";
 
 export type ProductFormValues = {
@@ -12,6 +12,14 @@ export type ProductFormValues = {
   imageUrl: string;
   price: number;
   stock: number;
+};
+
+type FieldErrors = {
+  name?: string;
+  description?: string;
+  imageUrl?: string;
+  price?: string;
+  stock?: string;
 };
 
 export default function ProductForm({
@@ -29,12 +37,39 @@ export default function ProductForm({
   const [price, setPrice] = useState(initial?.price?.toString() ?? "");
   const [stock, setStock] = useState(initial?.stock?.toString() ?? "10");
   const [error, setError] = useState<string | null>(null);
+  const [fieldErrors, setFieldErrors] = useState<FieldErrors>({});
   const [loading, setLoading] = useState(false);
   const [uploading, setUploading] = useState(false);
+  const [previewBroken, setPreviewBroken] = useState(false);
+
+  const previewSrc = useMemo(() => {
+    if (!imageUrl.trim().startsWith("http")) return null;
+    return getImageSrc(imageUrl.trim());
+  }, [imageUrl]);
+
+  function validate(): FieldErrors {
+    const next: FieldErrors = {};
+    if (!name.trim()) next.name = "Name is required.";
+    if (!description.trim()) next.description = "Description is required.";
+    if (!imageUrl.trim().startsWith("http")) {
+      next.imageUrl = "Upload an image or paste a Cloudinary URL (https://…).";
+    }
+    const priceNum = Number(price);
+    if (!Number.isFinite(priceNum) || priceNum < 0) {
+      next.price = "Enter a valid non-negative price.";
+    }
+    const stockNum = Number(stock);
+    if (!Number.isInteger(stockNum) || stockNum < 0) {
+      next.stock = "Stock must be a whole number ≥ 0.";
+    }
+    return next;
+  }
 
   async function uploadToCloudinary(file: File) {
     setError(null);
+    setFieldErrors((prev) => ({ ...prev, imageUrl: undefined }));
     setUploading(true);
+    setPreviewBroken(false);
 
     try {
       const signRes = await fetch("/api/admin/uploads/sign", {
@@ -67,13 +102,19 @@ export default function ProductForm({
       );
       const uploadData = await uploadRes.json().catch(() => ({}));
       if (!uploadRes.ok || typeof uploadData.secure_url !== "string") {
-        setError("Cloudinary upload failed");
+        setFieldErrors((prev) => ({
+          ...prev,
+          imageUrl: "Image upload failed. Try another file.",
+        }));
         return;
       }
 
       setImageUrl(uploadData.secure_url);
     } catch {
-      setError("Image upload failed");
+      setFieldErrors((prev) => ({
+        ...prev,
+        imageUrl: "Image upload failed. Check your connection and try again.",
+      }));
     } finally {
       setUploading(false);
     }
@@ -82,20 +123,20 @@ export default function ProductForm({
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
-    setLoading(true);
 
-    if (!imageUrl.trim().startsWith("http")) {
-      setLoading(false);
-      setError(
-        "Image URL must be a Cloudinary URL (it should start with https://). Use “Upload with Cloudinary”."
-      );
+    const nextErrors = validate();
+    setFieldErrors(nextErrors);
+    if (Object.keys(nextErrors).length > 0) {
+      setError("Please fix the highlighted fields before saving.");
       return;
     }
 
+    setLoading(true);
+
     const payload = {
-      name,
-      description,
-      imageUrl,
+      name: name.trim(),
+      description: description.trim(),
+      imageUrl: imageUrl.trim(),
       price: Number(price),
       stock: Number(stock),
       ...(mode === "create" && id.trim() ? { id: id.trim() } : {}),
@@ -121,14 +162,18 @@ export default function ProductForm({
       router.push("/admin/products");
       router.refresh();
     } catch {
-      setError("Network error");
+      setError("Network error — please try again.");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <form onSubmit={onSubmit} className="max-w-2xl space-y-5 rounded-xl border border-gray-200 bg-white p-6 shadow-sm">
+    <form
+      onSubmit={onSubmit}
+      className="max-w-2xl space-y-5 rounded-xl border border-gray-200 bg-white p-6 shadow-sm"
+      noValidate
+    >
       <div>
         <label htmlFor="name" className="mb-1 block text-sm font-medium text-gray-700">
           Name
@@ -136,10 +181,19 @@ export default function ProductForm({
         <input
           id="name"
           value={name}
-          onChange={(e) => setName(e.target.value)}
+          onChange={(e) => {
+            setName(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, name: undefined }));
+          }}
           required
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          aria-invalid={!!fieldErrors.name}
+          className={`w-full rounded-lg border px-3 py-2 ${
+            fieldErrors.name ? "border-red-400" : "border-gray-300"
+          }`}
         />
+        {fieldErrors.name && (
+          <p className="mt-1 text-sm text-red-600">{fieldErrors.name}</p>
+        )}
       </div>
 
       {mode === "create" && (
@@ -158,34 +212,56 @@ export default function ProductForm({
       )}
 
       <div>
-        <label htmlFor="description" className="mb-1 block text-sm font-medium text-gray-700">
+        <label
+          htmlFor="description"
+          className="mb-1 block text-sm font-medium text-gray-700"
+        >
           Description
         </label>
         <textarea
           id="description"
           value={description}
-          onChange={(e) => setDescription(e.target.value)}
+          onChange={(e) => {
+            setDescription(e.target.value);
+            setFieldErrors((prev) => ({ ...prev, description: undefined }));
+          }}
           required
           rows={4}
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          aria-invalid={!!fieldErrors.description}
+          className={`w-full rounded-lg border px-3 py-2 ${
+            fieldErrors.description ? "border-red-400" : "border-gray-300"
+          }`}
         />
+        {fieldErrors.description && (
+          <p className="mt-1 text-sm text-red-600">{fieldErrors.description}</p>
+        )}
       </div>
 
       <div>
-        <label htmlFor="imageUrl" className="mb-1 block text-sm font-medium text-gray-700">
-          Image filename or URL
+        <label
+          htmlFor="imageUrl"
+          className="mb-1 block text-sm font-medium text-gray-700"
+        >
+          Product image
         </label>
         <input
           id="imageUrl"
           value={imageUrl}
-          onChange={(e) => setImageUrl(e.target.value)}
+          onChange={(e) => {
+            setImageUrl(e.target.value);
+            setPreviewBroken(false);
+            setFieldErrors((prev) => ({ ...prev, imageUrl: undefined }));
+          }}
           required
           placeholder="https://res.cloudinary.com/…"
-          className="w-full rounded-lg border border-gray-300 px-3 py-2"
+          aria-invalid={!!fieldErrors.imageUrl}
+          className={`w-full rounded-lg border px-3 py-2 ${
+            fieldErrors.imageUrl ? "border-red-400" : "border-gray-300"
+          }`}
         />
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            {uploading ? "Uploading..." : "Upload image"}
+            {uploading ? "Uploading…" : "Upload image"}
             <input
               type="file"
               accept="image/*"
@@ -201,23 +277,40 @@ export default function ProductForm({
             />
           </label>
           <p className="text-xs text-gray-500">
-            Upload directly to Cloudinary (recommended) or paste a Cloudinary URL.
+            Upload to Cloudinary, or paste a Cloudinary URL.
           </p>
         </div>
-        {imageUrl && (
-          <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
-            <div className="relative aspect-square w-32 overflow-hidden rounded-lg bg-white">
-              <Image
-                src={getImageSrc(imageUrl)}
-                alt={name || "Product preview"}
-                fill
-                className="object-cover"
-                unoptimized
-                sizes="128px"
-              />
-            </div>
-          </div>
+        {fieldErrors.imageUrl && (
+          <p className="mt-1 text-sm text-red-600">{fieldErrors.imageUrl}</p>
         )}
+
+        <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+          {previewSrc && !previewBroken ? (
+            <div className="flex items-center gap-4">
+              <div className="relative aspect-square w-28 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
+                <Image
+                  src={previewSrc}
+                  alt={name || "Product preview"}
+                  fill
+                  className="object-cover"
+                  unoptimized
+                  sizes="112px"
+                  onError={() => setPreviewBroken(true)}
+                />
+              </div>
+              <div className="min-w-0">
+                <p className="text-sm font-medium text-gray-900">Image preview</p>
+                <p className="mt-1 truncate text-xs text-gray-500">{imageUrl}</p>
+              </div>
+            </div>
+          ) : (
+            <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-sm text-gray-500">
+              {previewBroken
+                ? "Preview failed — check the image URL"
+                : "No image yet — upload one to see a preview"}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -231,10 +324,19 @@ export default function ProductForm({
             min="0"
             step="0.01"
             value={price}
-            onChange={(e) => setPrice(e.target.value)}
+            onChange={(e) => {
+              setPrice(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, price: undefined }));
+            }}
             required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            aria-invalid={!!fieldErrors.price}
+            className={`w-full rounded-lg border px-3 py-2 ${
+              fieldErrors.price ? "border-red-400" : "border-gray-300"
+            }`}
           />
+          {fieldErrors.price && (
+            <p className="mt-1 text-sm text-red-600">{fieldErrors.price}</p>
+          )}
         </div>
         <div>
           <label htmlFor="stock" className="mb-1 block text-sm font-medium text-gray-700">
@@ -246,17 +348,29 @@ export default function ProductForm({
             min="0"
             step="1"
             value={stock}
-            onChange={(e) => setStock(e.target.value)}
+            onChange={(e) => {
+              setStock(e.target.value);
+              setFieldErrors((prev) => ({ ...prev, stock: undefined }));
+            }}
             required
-            className="w-full rounded-lg border border-gray-300 px-3 py-2"
+            aria-invalid={!!fieldErrors.stock}
+            className={`w-full rounded-lg border px-3 py-2 ${
+              fieldErrors.stock ? "border-red-400" : "border-gray-300"
+            }`}
           />
+          {fieldErrors.stock && (
+            <p className="mt-1 text-sm text-red-600">{fieldErrors.stock}</p>
+          )}
         </div>
       </div>
 
       {error && (
-        <p className="text-sm text-red-600" role="alert">
+        <div
+          className="rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700"
+          role="alert"
+        >
           {error}
-        </p>
+        </div>
       )}
 
       <div className="flex gap-3">
