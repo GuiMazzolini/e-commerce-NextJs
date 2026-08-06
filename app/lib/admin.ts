@@ -11,6 +11,10 @@ export function isAdminEmail(email: string | null | undefined): boolean {
   return getAdminEmails().includes(email.trim().toLowerCase());
 }
 
+export function normalizeProductImageUrl(imageUrl: string): string {
+  return imageUrl.trim();
+}
+
 /** URL-safe product id from a display name. */
 export function slugifyProductId(name: string): string {
   const slug = name

@@ -37,7 +37,10 @@ function serializeCartProduct(product: DBProduct, quantity: number) {
   };
 }
 
-async function buildCartProducts(db: any, items: CartItem[]) {
+async function buildCartProducts(
+  db: Awaited<ReturnType<typeof connectToDB>>["db"],
+  items: CartItem[]
+) {
   if (!items.length) return [];
   const productIds = items.map((i) => i.productId);
   const productDocs = await db

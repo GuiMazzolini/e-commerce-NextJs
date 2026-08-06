@@ -1,7 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
+import Image from "next/image";
 import { FormEvent, useState } from "react";
+import { getImageSrc } from "@/app/lib/images";
 
 export type ProductFormValues = {
   id?: string;
@@ -28,11 +30,67 @@ export default function ProductForm({
   const [stock, setStock] = useState(initial?.stock?.toString() ?? "10");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
+  const [uploading, setUploading] = useState(false);
+
+  async function uploadToCloudinary(file: File) {
+    setError(null);
+    setUploading(true);
+
+    try {
+      const signRes = await fetch("/api/admin/uploads/sign", {
+        method: "POST",
+        credentials: "include",
+      });
+      const signData = await signRes.json().catch(() => ({}));
+      if (!signRes.ok) {
+        setError(
+          typeof signData.error === "string"
+            ? signData.error
+            : "Could not start image upload"
+        );
+        return;
+      }
+
+      const formData = new FormData();
+      formData.append("file", file);
+      formData.append("api_key", signData.apiKey);
+      formData.append("timestamp", signData.timestamp);
+      formData.append("folder", signData.folder);
+      formData.append("signature", signData.signature);
+
+      const uploadRes = await fetch(
+        `https://api.cloudinary.com/v1_1/${signData.cloudName}/image/upload`,
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+      const uploadData = await uploadRes.json().catch(() => ({}));
+      if (!uploadRes.ok || typeof uploadData.secure_url !== "string") {
+        setError("Cloudinary upload failed");
+        return;
+      }
+
+      setImageUrl(uploadData.secure_url);
+    } catch {
+      setError("Image upload failed");
+    } finally {
+      setUploading(false);
+    }
+  }
 
   async function onSubmit(e: FormEvent) {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    if (!imageUrl.trim().startsWith("http")) {
+      setLoading(false);
+      setError(
+        "Image URL must be a Cloudinary URL (it should start with https://). Use “Upload with Cloudinary”."
+      );
+      return;
+    }
 
     const payload = {
       name,
@@ -122,13 +180,43 @@ export default function ProductForm({
           value={imageUrl}
           onChange={(e) => setImageUrl(e.target.value)}
           required
-          placeholder="shirt.jpg or https://…"
+          placeholder="https://res.cloudinary.com/…"
           className="w-full rounded-lg border border-gray-300 px-3 py-2"
         />
-        <p className="mt-1 text-xs text-gray-500">
-          Put files in <code className="rounded bg-gray-100 px-1">public/</code> and use the
-          filename (e.g. <code className="rounded bg-gray-100 px-1">hoodie.jpg</code>).
-        </p>
+        <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            {uploading ? "Uploading..." : "Upload with Cloudinary"}
+            <input
+              type="file"
+              accept="image/*"
+              className="hidden"
+              disabled={uploading}
+              onChange={(e) => {
+                const file = e.target.files?.[0];
+                if (file) {
+                  void uploadToCloudinary(file);
+                }
+                e.currentTarget.value = "";
+              }}
+            />
+          </label>
+          <p className="text-xs text-gray-500">
+            Upload directly to Cloudinary (recommended) or paste a Cloudinary URL.
+          </p>
+        </div>
+        {imageUrl && (
+          <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
+            <div className="relative aspect-square w-32 overflow-hidden rounded-lg bg-white">
+              <Image
+                src={getImageSrc(imageUrl)}
+                alt={name || "Product preview"}
+                fill
+                className="object-cover"
+                sizes="128px"
+              />
+            </div>
+          </div>
+        )}
       </div>
 
       <div className="grid grid-cols-2 gap-4">
@@ -173,7 +261,7 @@ export default function ProductForm({
       <div className="flex gap-3">
         <button
           type="submit"
-          disabled={loading}
+          disabled={loading || uploading}
           className="rounded-lg bg-blue-600 px-5 py-2.5 font-semibold text-white hover:bg-blue-700 disabled:opacity-60"
         >
           {loading ? "Saving…" : mode === "create" ? "Create product" : "Save changes"}

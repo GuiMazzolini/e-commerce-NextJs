@@ -7,7 +7,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 54.99,
     description:
       'Cozy heavyweight navy hoodie with a brushed fleece interior and our signature circuit-robot chest print. Kangaroo pocket, ribbed cuffs, and a lined hood for those late-night debugging sessions.',
-    imageUrl: 'hoodie.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006725/styleshop/products/hoodie.png',
     stock: 25,
   },
   {
@@ -16,7 +16,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 9.99,
     description:
       'Ten weatherproof, scratch-resistant vinyl stickers featuring our robot mascot in every mood plus retro circuit-board art. Perfect for laptops, water bottles, and hardware cases.',
-    imageUrl: 'stickers.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006727/styleshop/products/stickers.png',
     stock: 100,
   },
   {
@@ -25,7 +25,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 27.99,
     description:
       'Matte-black double-walled stainless steel bottle that keeps drinks cold for 24 hours or hot for 12. Leak-proof lid and a laser-etched mascot logo that never fades.',
-    imageUrl: 'bottle.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006729/styleshop/products/bottle.png',
     stock: 40,
   },
   {
@@ -34,7 +34,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 17.99,
     description:
       'Sturdy natural-canvas tote with reinforced straps and a roomy interior. Carries your laptop, dev boards, and groceries in equal style.',
-    imageUrl: 'tote.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006731/styleshop/products/tote.png',
     stock: 50,
   },
   {
@@ -43,7 +43,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 15.99,
     description:
       'A5 hardcover journal with 192 dotted pages, an elastic closure, ribbon bookmark, and a deep-blue cover embossed with gold circuit foil. Ideal for sketches, schematics, and standup notes.',
-    imageUrl: 'notebook.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006733/styleshop/products/notebook.png',
     stock: 60,
   },
   {
@@ -52,7 +52,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 12.99,
     description:
       'A trio of hard-enamel pins — the RoboBuddy mascot, a mini circuit board, and a lightning bolt — with rubber clutch backs. Pin them to bags, jackets, or lanyards.',
-    imageUrl: 'pins.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006735/styleshop/products/pins.png',
     stock: 75,
   },
   {
@@ -61,7 +61,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 24.99,
     description:
       'A lightweight, breathable canvas cap with an adjustable strap and embroidered mascot patch. Perfect for sunny days and outdoor meetups.',
-    imageUrl: 'hat.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006711/styleshop/products/hat.jpg',
     stock: 30,
   },
   {
@@ -70,7 +70,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 14.99,
     description:
       'A sturdy 12oz ceramic mug with a comfortable handle. Microwave- and dishwasher-safe for your daily dose of caffeine-driven development.',
-    imageUrl: 'mug.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006713/styleshop/products/mug.jpg',
     stock: 45,
   },
   {
@@ -79,7 +79,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 29.99,
     description:
       'Soft, pre-shrunk ring-spun cotton tee with a relaxed fit and a front mascot print. A wardrobe staple that pairs with anything.',
-    imageUrl: 'shirt.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006715/styleshop/products/shirt.jpg',
     stock: 10,
   },
   {
@@ -88,7 +88,7 @@ export const SEED_PRODUCTS: Product[] = [
     price: 19.99,
     description:
       'Durable cotton apron with front pockets and an adjustable neck strap. Keeps you clean while you cook up something great.',
-    imageUrl: 'apron.jpg',
+    imageUrl: 'https://res.cloudinary.com/djxvfermp/image/upload/v1786006723/styleshop/products/apron.jpg',
     stock: 20,
   },
 ];

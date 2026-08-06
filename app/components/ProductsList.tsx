@@ -3,6 +3,7 @@
 import { Product } from "../product-data";
 import Image from "next/image";
 import Link from "next/link";
+import { getImageSrc } from "../lib/images";
 import { useCartStore } from "../lib/store/cartStore";
 import CartErrorBanner from "./CartErrorBanner";
 
@@ -35,7 +36,7 @@ export default function ProductsList({ products }: { products: Product[] }) {
                   <div className="bg-white rounded-xl shadow-md overflow-hidden hover:shadow-xl hover:-translate-y-1 transition-all duration-300">
                     <div className="relative w-full aspect-square bg-gray-100">
                       <Image
-                        src={`/${product.imageUrl}`}
+                        src={getImageSrc(product.imageUrl)}
                         alt={product.name}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"

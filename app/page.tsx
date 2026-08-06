@@ -1,6 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { connectToDB } from "@/app/api/db";
+import { getImageSrc } from "@/app/lib/images";
 
 const GITHUB_URL = "https://github.com/GuiMazzolini/e-commerce-NextJs";
 
@@ -79,10 +80,6 @@ async function getHomeProducts(): Promise<HomeProduct[]> {
   } catch {
     return [];
   }
-}
-
-function productImageSrc(imageUrl: string) {
-  return imageUrl.startsWith("http") ? imageUrl : `/${imageUrl}`;
 }
 
 export default async function LandingPage() {
@@ -167,7 +164,7 @@ export default async function LandingPage() {
                           className="relative block aspect-square rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
-                            src={productImageSrc(heroProducts[0].imageUrl)}
+                            src={getImageSrc(heroProducts[0].imageUrl)}
                             alt={heroProducts[0].name}
                             fill
                             className="object-cover"
@@ -182,7 +179,7 @@ export default async function LandingPage() {
                           className="relative block aspect-4/3 rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
-                            src={productImageSrc(heroProducts[1].imageUrl)}
+                            src={getImageSrc(heroProducts[1].imageUrl)}
                             alt={heroProducts[1].name}
                             fill
                             className="object-cover"
@@ -198,7 +195,7 @@ export default async function LandingPage() {
                           className="relative block aspect-4/3 rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
-                            src={productImageSrc(heroProducts[2].imageUrl)}
+                            src={getImageSrc(heroProducts[2].imageUrl)}
                             alt={heroProducts[2].name}
                             fill
                             className="object-cover"
@@ -212,7 +209,7 @@ export default async function LandingPage() {
                           className="relative block aspect-square rounded-2xl overflow-hidden bg-stone-100"
                         >
                           <Image
-                            src={productImageSrc(heroProducts[3].imageUrl)}
+                            src={getImageSrc(heroProducts[3].imageUrl)}
                             alt={heroProducts[3].name}
                             fill
                             className="object-cover"
@@ -310,7 +307,7 @@ export default async function LandingPage() {
                 >
                   <div className="relative aspect-square bg-stone-100">
                     <Image
-                      src={productImageSrc(product.imageUrl)}
+                      src={getImageSrc(product.imageUrl)}
                       alt={product.name}
                       fill
                       className="object-cover transition-transform group-hover:scale-105"

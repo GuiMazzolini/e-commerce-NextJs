@@ -3,6 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { connectToDB } from "@/app/api/db";
 import { getAvailableStock } from "@/app/lib/cart-limits";
+import { getImageSrc } from "@/app/lib/images";
 import DeleteProductButton from "./DeleteProductButton";
 
 export const metadata: Metadata = {
@@ -50,7 +51,7 @@ export default async function AdminProductsPage() {
                   <div className="flex items-center gap-3">
                     <div className="relative h-12 w-12 shrink-0 overflow-hidden rounded-lg bg-gray-100">
                       <Image
-                        src={`/${product.imageUrl}`}
+                        src={getImageSrc(product.imageUrl)}
                         alt=""
                         fill
                         className="object-cover"

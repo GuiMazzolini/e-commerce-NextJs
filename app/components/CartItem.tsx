@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Product } from "../product-data";
 import { MAX_CART_QUANTITY } from "../lib/cart-limits";
+import { getImageSrc } from "../lib/images";
 import { useCartStore } from "../lib/store/cartStore";
 
 interface CartItemProps {
@@ -27,7 +28,7 @@ export default function CartItem({ product }: CartItemProps) {
           className="sm:w-48 h-48 sm:h-auto relative bg-gray-100 shrink-0"
         >
           <Image
-            src={`/${product.imageUrl}`}
+            src={getImageSrc(product.imageUrl)}
             alt={product.name}
             fill
             className="object-cover hover:scale-105 transition-transform duration-300"

@@ -211,7 +211,8 @@ export const useCartStore = create<CartState>()(
 
       clearLoading: (productId) =>
         set((state) => {
-          const { [productId]: _, ...rest } = state.loading;
+          const { [productId]: removed, ...rest } = state.loading;
+          void removed;
           return { loading: rest };
         }),
 

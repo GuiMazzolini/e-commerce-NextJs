@@ -1,11 +1,10 @@
-import { MongoClient, ServerApiVersion } from "mongodb";
+import { Db, MongoClient, ServerApiVersion } from "mongodb";
 
 let cachedClient: MongoClient | null = null;
-// Typed as `any` so existing dynamic collection access keeps working.
-let cachedDB: any = null;
+let cachedDB: Db | null = null;
 let indexesEnsured = false;
 
-async function ensureIndexes(db: any) {
+async function ensureIndexes(db: Db) {
   if (indexesEnsured) return;
   // Prevents duplicate orders when webhook + success page fulfill the same session.
   await db.collection("orders").createIndex(

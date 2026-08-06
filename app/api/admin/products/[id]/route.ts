@@ -1,5 +1,5 @@
 import { connectToDB } from "@/app/api/db";
-import { isAdminEmail } from "@/app/lib/admin";
+import { isAdminEmail, normalizeProductImageUrl } from "@/app/lib/admin";
 import { authOptions } from "@/app/lib/auth";
 import { getAvailableStock } from "@/app/lib/cart-limits";
 import { getServerSession } from "next-auth";
@@ -75,7 +75,7 @@ export async function PATCH(
     updates.description = description;
   }
   if (typeof body.imageUrl === "string") {
-    const imageUrl = body.imageUrl.trim().replace(/^\//, "");
+    const imageUrl = normalizeProductImageUrl(body.imageUrl);
     if (!imageUrl) {
       return NextResponse.json({ error: "imageUrl cannot be empty" }, { status: 400 });
     }

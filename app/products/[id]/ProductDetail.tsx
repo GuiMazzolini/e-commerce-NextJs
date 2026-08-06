@@ -4,6 +4,7 @@ import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CartErrorBanner from "@/app/components/CartErrorBanner";
+import { getImageSrc } from "@/app/lib/images";
 import { useCartStore } from "@/app/lib/store/cartStore";
 import type { Product } from "@/app/product-data";
 
@@ -46,7 +47,7 @@ export default function ProductDetail({ product }: ProductDetailProps) {
             <div className="lg:w-1/2 p-8 bg-gray-100 flex items-center justify-center">
               <div className="relative w-full aspect-square max-w-md">
                 <Image
-                  src={"/" + product.imageUrl}
+                  src={getImageSrc(product.imageUrl)}
                   alt={product.name}
                   fill
                   className="object-cover rounded-xl"

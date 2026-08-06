@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connectToDB } from "@/app/api/db";
+import { getImageSrc } from "@/app/lib/images";
 import { getAvailableStock } from "@/app/lib/cart-limits";
 import ProductDetail from "./ProductDetail";
 
@@ -47,7 +48,7 @@ export async function generateMetadata({
     openGraph: {
       title: product.name,
       description: product.description,
-      images: product.imageUrl ? [`/${product.imageUrl}`] : undefined,
+      images: product.imageUrl ? [getImageSrc(product.imageUrl)] : undefined,
     },
   };
 }

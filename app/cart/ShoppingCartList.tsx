@@ -30,7 +30,7 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
     if (initialCartProducts.length > 0) {
       setCart(initialCartProducts);
     }
-  }, []);
+  }, [initialCartProducts, setCart]);
 
   if (cartProducts.length === 0) {
     return (
@@ -41,7 +41,7 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
               Your cart is empty
             </h2>
             <p className="text-gray-600 mb-8">
-              Looks like you haven't added any items yet.
+              Looks like you haven&apos;t added any items yet.
             </p>
             <Link
               href="/products"

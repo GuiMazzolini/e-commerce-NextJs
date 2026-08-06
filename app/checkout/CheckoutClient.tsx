@@ -4,6 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
+import { getImageSrc } from "@/app/lib/images";
 import type { Product } from "@/app/product-data";
 import { getOrderTotal, getShippingCost } from "@/app/lib/shipping";
 import { useCartStore } from "@/app/lib/store/cartStore";
@@ -109,7 +110,7 @@ export default function CheckoutClient({
               >
                 <div className="relative w-24 h-24 shrink-0 rounded-lg overflow-hidden bg-gray-100">
                   <Image
-                    src={`/${product.imageUrl}`}
+                    src={getImageSrc(product.imageUrl)}
                     alt={product.name}
                     fill
                     className="object-cover"

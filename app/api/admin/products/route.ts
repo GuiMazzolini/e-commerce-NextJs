@@ -1,5 +1,9 @@
 import { connectToDB } from "@/app/api/db";
-import { isAdminEmail, slugifyProductId } from "@/app/lib/admin";
+import {
+  isAdminEmail,
+  normalizeProductImageUrl,
+  slugifyProductId,
+} from "@/app/lib/admin";
 import { authOptions } from "@/app/lib/auth";
 import { getAvailableStock } from "@/app/lib/cart-limits";
 import { getServerSession } from "next-auth";
@@ -48,7 +52,10 @@ export async function POST(req: NextRequest) {
 
   const name = typeof body.name === "string" ? body.name.trim() : "";
   const description = typeof body.description === "string" ? body.description.trim() : "";
-  const imageUrl = typeof body.imageUrl === "string" ? body.imageUrl.trim().replace(/^\//, "") : "";
+  const imageUrl =
+    typeof body.imageUrl === "string"
+      ? normalizeProductImageUrl(body.imageUrl)
+      : "";
   const price = Number(body.price);
   const stock = Number(body.stock);
   const id =

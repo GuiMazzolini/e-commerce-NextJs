@@ -50,7 +50,7 @@ Copy the example file and fill in your values:
 cp .env.example .env.local
 ```
 
-See `.env.example` for the full list. At minimum you need MongoDB credentials, NextAuth secret + OAuth keys, and Stripe keys. Optional: `RESEND_API_KEY` for order confirmation emails.
+See `.env.example` for the full list. At minimum you need MongoDB credentials, NextAuth secret + OAuth keys, and Stripe keys. Optional: `RESEND_API_KEY` for order confirmation emails and Cloudinary credentials for admin image uploads.
 
 ### 3. Seed products
 
@@ -118,6 +118,20 @@ app/
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
 | `npm run seed` | Seed sample products into MongoDB |
+
+## Cloudinary uploads
+
+Admins can upload product images directly from the product form.
+
+1. Create a Cloudinary account and copy:
+   - `CLOUDINARY_CLOUD_NAME`
+   - `CLOUDINARY_API_KEY`
+   - `CLOUDINARY_API_SECRET`
+2. Add them to `.env.local`
+3. Restart the dev server
+4. In Admin -> Products, use `Upload with Cloudinary`
+
+The browser uploads the file directly to Cloudinary using a server-signed request, then saves the returned `secure_url` on the product.
 
 ## Author
 
