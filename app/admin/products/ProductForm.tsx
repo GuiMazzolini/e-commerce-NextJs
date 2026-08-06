@@ -185,7 +185,7 @@ export default function ProductForm({
         />
         <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
           <label className="inline-flex cursor-pointer items-center justify-center rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
-            {uploading ? "Uploading..." : "Upload with Cloudinary"}
+            {uploading ? "Uploading..." : "Upload image"}
             <input
               type="file"
               accept="image/*"
