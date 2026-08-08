@@ -7,6 +7,7 @@ import { connectToDB } from "@/app/api/db";
 import { isAdminEmail } from "@/app/lib/admin";
 import { users } from "@/app/lib/db-collections";
 import { checkRateLimit, RATE_LIMITS } from "@/app/lib/rate-limit";
+import { normalizeEmail } from "@/app/lib/normalize-email";
 
 /**
  * NextAuth hands `authorize` a request-like object whose headers are a plain
@@ -86,13 +87,52 @@ export const authOptions: NextAuthOptions = {
     strategy: "jwt",
   },
   callbacks: {
-    async jwt({ token }) {
+    /**
+     * Sessions are JWTs and there is no database adapter, so an OAuth sign-in
+     * would otherwise never produce a users record — leaving account settings
+     * with nothing to read or write. Upsert one on the way in.
+     */
+    async signIn({ user, account }) {
+      const email = user?.email ? normalizeEmail(user.email) : null;
+      if (!email) return false;
+
+      // The credentials provider already has its record.
+      if (account?.provider && account.provider !== "credentials") {
+        const { db } = await connectToDB();
+        await users(db).updateOne(
+          { email },
+          {
+            $set: { updatedAt: new Date() },
+            $setOnInsert: {
+              email,
+              name: user.name ?? email.split("@")[0],
+              provider: account.provider,
+              createdAt: new Date(),
+            },
+          },
+          { upsert: true }
+        );
+      }
+      return true;
+    },
+
+    async jwt({ token, trigger, session }) {
       token.isAdmin = isAdminEmail(token.email as string | undefined);
+
+      // useSession().update() after a profile edit, so the navbar and menu
+      // reflect the new name without forcing a sign-out.
+      if (trigger === "update" && typeof session?.name === "string") {
+        token.name = session.name;
+      }
       return token;
     },
+
     async session({ session, token }) {
       if (session.user) {
         session.user.isAdmin = !!token.isAdmin;
+        if (typeof token.name === "string") {
+          session.user.name = token.name;
+        }
       }
       return session;
     },

@@ -4,8 +4,11 @@ import { getStripe } from "@/app/lib/stripe";
 import { decodeCartItemsMetadata } from "@/app/lib/cart-metadata";
 import { carts, orders, products } from "@/app/lib/db-collections";
 import { isDuplicateKeyError } from "@/app/lib/mongo-errors";
+import { normalizeEmail } from "@/app/lib/normalize-email";
 import type { Db } from "mongodb";
 import type Stripe from "stripe";
+
+export { normalizeEmail };
 
 export type OrderItem = {
   name: string;
@@ -55,11 +58,6 @@ export function toOrder(doc: Record<string, unknown>): Order {
 
 function centsToDollars(cents: number | null | undefined): number {
   return (cents ?? 0) / 100;
-}
-
-/** Emails are compared and stored case-insensitively throughout. */
-export function normalizeEmail(email: string): string {
-  return email.trim().toLowerCase();
 }
 
 export function buildOrderFromStripeSession(

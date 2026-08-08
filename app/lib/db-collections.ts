@@ -30,11 +30,31 @@ export type CartDoc = {
   updatedAt?: Date;
 };
 
+/** Saved shipping address. Field names mirror Stripe's address shape. */
+export type SavedAddress = {
+  line1: string;
+  line2: string | null;
+  city: string;
+  state: string | null;
+  postalCode: string;
+  country: string;
+};
+
 export type UserDoc = {
   email: string;
   name: string;
-  passwordHash: string;
+  /**
+   * Absent for OAuth accounts, which never set one. Any password flow must
+   * branch on this rather than assume it exists.
+   */
+  passwordHash?: string;
+  address?: SavedAddress | null;
+  /** Set lazily when an address is first saved; used to prefill Checkout. */
+  stripeCustomerId?: string;
+  /** "credentials" | "github" | "google" — how the account was created. */
+  provider?: string;
   createdAt: Date;
+  updatedAt?: Date;
 };
 
 /** One fixed-window counter. `expiresAt` is swept by a TTL index. */
