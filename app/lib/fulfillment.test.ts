@@ -115,4 +115,48 @@ describe("fulfillCheckoutSession", () => {
     expect(insertOneMock).not.toHaveBeenCalled();
     expect(updateOneProductsMock).not.toHaveBeenCalled();
   });
+
+  it("normalizes the order owner email", async () => {
+    insertOneMock.mockResolvedValueOnce({ insertedId: "1" });
+    retrieveMock.mockResolvedValueOnce({
+      id: "cs_test_case",
+      payment_status: "paid",
+      client_reference_id: "Buyer@Example.COM",
+      metadata: { cartItems: "" },
+      customer_details: { email: "Buyer@Example.COM" },
+      line_items: { data: [] },
+    });
+
+    await fulfillCheckoutSession("cs_test_case");
+
+    expect(insertOneMock).toHaveBeenCalledWith(
+      expect.objectContaining({ userId: "buyer@example.com" })
+    );
+    expect(updateOneCartsMock).toHaveBeenCalledWith(
+      { userId: "buyer@example.com" },
+      expect.anything()
+    );
+  });
+
+  it("does not clear a cart for a guest checkout", async () => {
+    // A guest can type any address into Stripe. Trusting it here would let
+    // them empty the saved cart of the registered user who owns that email.
+    insertOneMock.mockResolvedValueOnce({ insertedId: "1" });
+    retrieveMock.mockResolvedValueOnce({
+      id: "cs_test_guest",
+      payment_status: "paid",
+      client_reference_id: null,
+      metadata: { isGuest: "true", cartItems: "hat:1" },
+      customer_details: { email: "victim@example.com" },
+      customer_email: null,
+      line_items: { data: [] },
+    });
+
+    const result = await fulfillCheckoutSession("cs_test_guest");
+
+    expect(result).toEqual({ paid: true, fulfilled: true });
+    expect(insertOneMock).toHaveBeenCalledTimes(1);
+    expect(updateOneProductsMock).toHaveBeenCalledTimes(1);
+    expect(updateOneCartsMock).not.toHaveBeenCalled();
+  });
 });
