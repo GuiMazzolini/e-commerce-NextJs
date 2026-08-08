@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { connectToDB } from "@/app/api/db";
 import { getAvailableStock } from "@/app/lib/cart-limits";
+import { products as productsCollection } from "@/app/lib/db-collections";
 import AdminProductsTable from "./AdminProductsTable";
 
 export const metadata: Metadata = {
@@ -10,12 +11,12 @@ export const metadata: Metadata = {
 
 export default async function AdminProductsPage() {
   const { db } = await connectToDB();
-  const docs = await db.collection("products").find({}).sort({ name: 1 }).toArray();
-  const products = docs.map((doc: Record<string, unknown>) => ({
-    id: String(doc.id),
-    name: String(doc.name),
-    price: Number(doc.price),
-    imageUrl: String(doc.imageUrl),
+  const docs = await productsCollection(db).find({}).sort({ name: 1 }).toArray();
+  const products = docs.map((doc) => ({
+    id: doc.id,
+    name: doc.name,
+    price: doc.price,
+    imageUrl: doc.imageUrl,
     stock: getAvailableStock(doc.stock),
   }));
 

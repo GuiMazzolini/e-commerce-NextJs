@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { connectToDB } from "@/app/api/db";
 import { getImageSrc } from "@/app/lib/images";
+import { products as productsCollection } from "@/app/lib/db-collections";
 
 const GITHUB_URL = "https://github.com/GuiMazzolini/e-commerce-NextJs";
 
@@ -57,8 +58,7 @@ const stack = [
 async function getHomeProducts(): Promise<HomeProduct[]> {
   try {
     const { db } = await connectToDB();
-    const docs = await db
-      .collection("products")
+    const docs = await productsCollection(db)
       .find({})
       .sort({ name: 1 })
       .limit(8)

@@ -3,9 +3,13 @@ import { notFound } from "next/navigation";
 import { connectToDB } from "@/app/api/db";
 import { getImageSrc } from "@/app/lib/images";
 import { getAvailableStock } from "@/app/lib/cart-limits";
+import { products } from "@/app/lib/db-collections";
 import ProductDetail from "./ProductDetail";
 
 type Params = { id: string };
+
+/** Live stock, same reasoning as the catalog page. */
+export const dynamic = "force-dynamic";
 
 type DBProduct = {
   id: string;
@@ -18,7 +22,7 @@ type DBProduct = {
 
 async function getProduct(id: string): Promise<DBProduct | null> {
   const { db } = await connectToDB();
-  const product = await db.collection("products").findOne({ id });
+  const product = await products(db).findOne({ id });
   if (!product) return null;
 
   return {
