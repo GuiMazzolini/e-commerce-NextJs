@@ -10,7 +10,6 @@ import { useCartStore } from "../lib/store/cartStore";
 const links = [
   { href: "/products", label: "Products" },
   { href: "/cart", label: "Cart" },
-  { href: "/checkout", label: "Checkout" },
   { href: "/orders", label: "Orders" },
 ];
 
