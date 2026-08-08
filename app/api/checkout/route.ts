@@ -1,10 +1,16 @@
 import { connectToDB } from "@/app/api/db";
 import { authOptions } from "@/app/lib/auth";
+import { carts, products } from "@/app/lib/db-collections";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getAppUrl, getStripe } from "@/app/lib/stripe";
 import { getShippingCost } from "@/app/lib/shipping";
-import { encodeCartItemsMetadata } from "@/app/lib/cart-metadata";
+import {
+  encodeCartItemsMetadata,
+  STRIPE_METADATA_VALUE_LIMIT,
+} from "@/app/lib/cart-metadata";
+import { MAX_CART_LINE_ITEMS } from "@/app/lib/schemas";
+import { enforceRateLimit, RATE_LIMITS } from "@/app/lib/rate-limit";
 import {
   attachQuantitiesToProducts,
   getCartStockError,
@@ -13,6 +19,14 @@ import {
 } from "@/app/lib/checkout-cart";
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(
+    req,
+    "checkout",
+    RATE_LIMITS.checkout.limit,
+    RATE_LIMITS.checkout.windowSec
+  );
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   const email = session?.user?.email ?? null;
 
@@ -20,7 +34,7 @@ export async function POST(req: NextRequest) {
 
   let items: CartItem[] = [];
   if (email) {
-    const cart = await db.collection("carts").findOne({ userId: email });
+    const cart = await carts(db).findOne({ userId: email });
     items = cart?.items || [];
   } else {
     let body: unknown = null;
@@ -40,9 +54,17 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
   }
 
+  // A saved cart is not validated on read, so it can exceed the cap even
+  // though the guest payload schema enforces it.
+  if (items.length > MAX_CART_LINE_ITEMS) {
+    return NextResponse.json(
+      { error: `A cart can hold at most ${MAX_CART_LINE_ITEMS} different products` },
+      { status: 400 }
+    );
+  }
+
   const productIds = items.map((i) => i.productId);
-  const productDocs = await db
-    .collection("products")
+  const productDocs = await products(db)
     .find({ id: { $in: productIds } })
     .toArray();
 
@@ -87,36 +109,55 @@ export async function POST(req: NextRequest) {
     cartProducts.map((p) => ({ productId: p.id, quantity: p.quantity }))
   );
 
-  const checkoutSession = await stripe.checkout.sessions.create({
-    mode: "payment",
-    line_items,
-    shipping_address_collection: {
-      allowed_countries: ["US", "CA", "GB", "BR", "PT", "DE", "FR", "ES", "IT", "NL"],
-    },
-    shipping_options: [
-      {
-        shipping_rate_data: {
-          type: "fixed_amount",
-          display_name: shippingCost === 0 ? "Free shipping" : "Standard shipping",
-          fixed_amount: {
-            amount: Math.round(shippingCost * 100),
-            currency: "usd",
+  // Stripe rejects metadata values over 500 chars. Fulfillment decrements stock
+  // from this string, so silently truncating it would leave inventory wrong.
+  if (cartItemsMeta.length > STRIPE_METADATA_VALUE_LIMIT) {
+    return NextResponse.json(
+      { error: "Cart is too large to check out. Please remove some items." },
+      { status: 400 }
+    );
+  }
+
+  let checkoutSession;
+  try {
+    checkoutSession = await stripe.checkout.sessions.create({
+      mode: "payment",
+      line_items,
+      shipping_address_collection: {
+        allowed_countries: ["US", "CA", "GB", "BR", "PT", "DE", "FR", "ES", "IT", "NL"],
+      },
+      shipping_options: [
+        {
+          shipping_rate_data: {
+            type: "fixed_amount",
+            display_name: shippingCost === 0 ? "Free shipping" : "Standard shipping",
+            fixed_amount: {
+              amount: Math.round(shippingCost * 100),
+              currency: "usd",
+            },
           },
         },
-      },
-    ],
-    success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
-    cancel_url: `${origin}/checkout`,
-    ...(email
-      ? {
-          client_reference_id: email,
-          customer_email: email,
-          metadata: { userId: email, cartItems: cartItemsMeta },
-        }
-      : {
-          metadata: { isGuest: "true", cartItems: cartItemsMeta },
-        }),
-  });
+      ],
+      success_url: `${origin}/checkout/success?session_id={CHECKOUT_SESSION_ID}`,
+      // Cancelling returns to the cart, which is now the only review step.
+      cancel_url: `${origin}/cart`,
+      ...(email
+        ? {
+            client_reference_id: email,
+            customer_email: email,
+            metadata: { userId: email, cartItems: cartItemsMeta },
+          }
+        : {
+            metadata: { isGuest: "true", cartItems: cartItemsMeta },
+          }),
+    });
+  } catch (err) {
+    console.error("Stripe checkout session creation failed:", err);
+    return NextResponse.json(
+      { error: "Payment provider is unavailable. Please try again." },
+      { status: 502 }
+    );
+  }
 
   if (!checkoutSession.url) {
     return NextResponse.json({ error: "Could not create checkout session" }, { status: 500 });
