@@ -12,11 +12,20 @@
   --font-mono: var(--font-geist-mono);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+/*
+ * The UI is light-only: every surface is a hardcoded bg-white / bg-gray-50
+ * with text-gray-* on top, and there is not a single `dark:` variant in the
+ * app. A prefers-color-scheme block here used to flip --foreground to near
+ * white, and because Tailwind's preflight sets `color: inherit` on form
+ * controls, every input and select inherited white text while keeping its
+ * explicit bg-white — invisible for anyone whose OS is set to dark.
+ *
+ * Declaring the scheme keeps browser-rendered UI (select popups, autofill,
+ * scrollbars, date pickers) light too. Adding real dark mode means auditing
+ * every surface, not reinstating this variable.
+ */
+:root {
+  color-scheme: light;
 }
 
 body {
