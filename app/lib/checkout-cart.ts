@@ -1,4 +1,5 @@
-import { clampCartQuantity, getAvailableStock } from "@/app/lib/cart-limits";
+import { getAvailableStock } from "@/app/lib/cart-limits";
+import { guestCheckoutSchema } from "@/app/lib/schemas";
 
 export type CartItem = { productId: string; quantity: number };
 
@@ -13,25 +14,12 @@ export type StockCheckedProduct = {
 };
 
 /**
- * Parse guest checkout payload items. Returns null if the shape is invalid
- * or the cart would be empty after clamping.
+ * Parse guest checkout payload items. Returns null if the shape is invalid,
+ * the cart is empty, or it exceeds the line-item cap.
  */
 export function parseGuestCheckoutItems(body: unknown): CartItem[] | null {
-  if (!body || typeof body !== "object" || !("items" in body)) return null;
-  const items = (body as { items: unknown }).items;
-  if (!Array.isArray(items) || items.length === 0) return null;
-
-  const parsed: CartItem[] = [];
-  for (const item of items) {
-    if (!item || typeof item !== "object") return null;
-    const { productId, quantity } = item as Record<string, unknown>;
-    if (typeof productId !== "string" || !productId) return null;
-    if (typeof quantity !== "number" || !Number.isInteger(quantity)) return null;
-    const clamped = clampCartQuantity(quantity);
-    if (clamped < 1) return null;
-    parsed.push({ productId, quantity: clamped });
-  }
-  return parsed;
+  const result = guestCheckoutSchema.safeParse(body);
+  return result.success ? result.data.items : null;
 }
 
 /**

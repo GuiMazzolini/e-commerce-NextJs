@@ -2,6 +2,9 @@ import { connectToDB } from "@/app/api/db";
 import { isAdminEmail, normalizeProductImageUrl } from "@/app/lib/admin";
 import { authOptions } from "@/app/lib/auth";
 import { getAvailableStock } from "@/app/lib/cart-limits";
+import { products, type ProductDoc } from "@/app/lib/db-collections";
+import { badRequest, parseBody } from "@/app/lib/api-request";
+import { adminProductUpdateSchema } from "@/app/lib/schemas";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
@@ -37,7 +40,7 @@ export async function GET(
 
   const { id } = await params;
   const { db } = await connectToDB();
-  const product = await db.collection("products").findOne({ id });
+  const product = await products(db).findOne({ id });
   if (!product) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
@@ -55,49 +58,28 @@ export async function PATCH(
   }
 
   const { id } = await params;
-  const body = await req.json().catch(() => null);
-  if (!body || typeof body !== "object") {
-    return NextResponse.json({ error: "Invalid body" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, adminProductUpdateSchema);
+  if (!parsed.ok) return parsed.response;
 
-  const updates: Record<string, unknown> = { updatedAt: new Date() };
+  const updates: Partial<ProductDoc> & { updatedAt: Date } = {
+    updatedAt: new Date(),
+  };
 
-  if (typeof body.name === "string") {
-    const name = body.name.trim();
-    if (!name) return NextResponse.json({ error: "name cannot be empty" }, { status: 400 });
-    updates.name = name;
-  }
-  if (typeof body.description === "string") {
-    const description = body.description.trim();
-    if (!description) {
-      return NextResponse.json({ error: "description cannot be empty" }, { status: 400 });
+  const { name, description, imageUrl, price, stock } = parsed.data;
+  if (name !== undefined) updates.name = name;
+  if (description !== undefined) updates.description = description;
+  if (price !== undefined) updates.price = price;
+  if (stock !== undefined) updates.stock = stock;
+  if (imageUrl !== undefined) {
+    try {
+      updates.imageUrl = normalizeProductImageUrl(imageUrl);
+    } catch (err) {
+      return badRequest(err instanceof Error ? err.message : "Invalid image URL");
     }
-    updates.description = description;
-  }
-  if (typeof body.imageUrl === "string") {
-    const imageUrl = normalizeProductImageUrl(body.imageUrl);
-    if (!imageUrl) {
-      return NextResponse.json({ error: "imageUrl cannot be empty" }, { status: 400 });
-    }
-    updates.imageUrl = imageUrl;
-  }
-  if (body.price !== undefined) {
-    const price = Number(body.price);
-    if (!Number.isFinite(price) || price < 0) {
-      return NextResponse.json({ error: "price must be a non-negative number" }, { status: 400 });
-    }
-    updates.price = price;
-  }
-  if (body.stock !== undefined) {
-    const stock = Number(body.stock);
-    if (!Number.isInteger(stock) || stock < 0) {
-      return NextResponse.json({ error: "stock must be a non-negative integer" }, { status: 400 });
-    }
-    updates.stock = stock;
   }
 
   const { db } = await connectToDB();
-  const updated = await db.collection("products").findOneAndUpdate(
+  const updated = await products(db).findOneAndUpdate(
     { id },
     { $set: updates },
     { returnDocument: "after" }
@@ -121,7 +103,7 @@ export async function DELETE(
 
   const { id } = await params;
   const { db } = await connectToDB();
-  const result = await db.collection("products").deleteOne({ id });
+  const result = await products(db).deleteOne({ id });
   if (result.deletedCount === 0) {
     return NextResponse.json({ error: "Product not found" }, { status: 404 });
   }
