@@ -1,6 +1,6 @@
 import { connectToDB } from "@/app/api/db";
 import { authOptions } from "@/app/lib/auth";
-import { carts, products } from "@/app/lib/db-collections";
+import { carts, products, users } from "@/app/lib/db-collections";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getAppUrl, getStripe } from "@/app/lib/stripe";
@@ -32,10 +32,17 @@ export async function POST(req: NextRequest) {
 
   const { db } = await connectToDB();
 
+  // Present only once a signed-in user has saved an address.
+  let stripeCustomerId: string | undefined;
+
   let items: CartItem[] = [];
   if (email) {
-    const cart = await carts(db).findOne({ userId: email });
+    const [cart, user] = await Promise.all([
+      carts(db).findOne({ userId: email }),
+      users(db).findOne({ email }),
+    ]);
     items = cart?.items || [];
+    stripeCustomerId = user?.stripeCustomerId;
   } else {
     let body: unknown = null;
     try {
@@ -144,7 +151,12 @@ export async function POST(req: NextRequest) {
       ...(email
         ? {
             client_reference_id: email,
-            customer_email: email,
+            // A Customer carries the saved shipping address, so Checkout
+            // prefills it. Stripe rejects `customer` and `customer_email`
+            // together, so only one is ever sent.
+            ...(stripeCustomerId
+              ? { customer: stripeCustomerId }
+              : { customer_email: email }),
             metadata: { userId: email, cartItems: cartItemsMeta },
           }
         : {

@@ -47,6 +47,30 @@ export const registerSchema = z.object({
   password: z.string().min(8).max(200),
 });
 
+export const profileSchema = z.object({
+  name: z.string().trim().min(1).max(100),
+});
+
+export const passwordChangeSchema = z.object({
+  // Absent when an OAuth account is setting a password for the first time.
+  currentPassword: z.string().min(1).max(200).optional(),
+  newPassword: z.string().min(8).max(200),
+});
+
+/** ISO 3166-1 alpha-2, matching the countries Checkout accepts. */
+export const addressSchema = z.object({
+  line1: z.string().trim().min(1).max(200),
+  line2: z.string().trim().max(200).nullish().transform((v) => v || null),
+  city: z.string().trim().min(1).max(100),
+  state: z.string().trim().max(100).nullish().transform((v) => v || null),
+  postalCode: z.string().trim().min(1).max(20),
+  country: z
+    .string()
+    .trim()
+    .length(2)
+    .transform((v) => v.toUpperCase()),
+});
+
 export const adminProductCreateSchema = z.object({
   id: productIdSchema.optional(),
   name: z.string().trim().min(1).max(200),
