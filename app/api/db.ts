@@ -6,11 +6,27 @@ let indexesEnsured = false;
 
 async function ensureIndexes(db: Db) {
   if (indexesEnsured) return;
-  // Prevents duplicate orders when webhook + success page fulfill the same session.
-  await db.collection("orders").createIndex(
-    { stripeSessionId: 1 },
-    { unique: true }
-  );
+
+  await Promise.all([
+    // Prevents duplicate orders when webhook + success page fulfill the same session.
+    db.collection("orders").createIndex({ stripeSessionId: 1 }, { unique: true }),
+    db.collection("orders").createIndex({ userId: 1, createdAt: -1 }),
+
+    // Registration does check-then-insert, which races. This is what actually
+    // enforces one account per email.
+    db.collection("users").createIndex({ email: 1 }, { unique: true }),
+
+    db.collection("carts").createIndex({ userId: 1 }, { unique: true }),
+
+    // Every product lookup queries by `id`, not `_id`.
+    db.collection("products").createIndex({ id: 1 }, { unique: true }),
+
+    // Rate-limit windows expire themselves.
+    db
+      .collection("ratelimits")
+      .createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
+  ]);
+
   indexesEnsured = true;
 }
 
@@ -41,6 +57,9 @@ export async function connectToDB() {
 
   const dbName = process.env.MONGODB_DB || "ecommerce-nextjs";
   const client = new MongoClient(getConnectionUri(), {
+    // The driver defaults to 30s, which makes an unreachable database look
+    // like a hung page rather than a failure. Fail fast and surface the error.
+    serverSelectionTimeoutMS: 5000,
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
