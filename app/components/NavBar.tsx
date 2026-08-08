@@ -5,11 +5,11 @@ import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import AuthButton from "./AuthButton";
-import { useCartStore } from "../lib/store/cartStore";
+import CartButton from "./CartButton";
 
+// The cart is not listed here — it lives beside the auth controls as an icon.
 const links = [
   { href: "/products", label: "Products" },
-  { href: "/cart", label: "Cart" },
   { href: "/orders", label: "Orders" },
 ];
 
@@ -17,13 +17,11 @@ function NavLink({
   href,
   label,
   active,
-  badge,
   onClick,
 }: {
   href: string;
   label: string;
   active: boolean;
-  badge?: number;
   onClick?: () => void;
 }) {
   return (
@@ -37,22 +35,15 @@ function NavLink({
       }`}
     >
       {label}
-      {badge != null && badge > 0 && (
-        <span className="absolute -top-1 -right-1 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-semibold text-white">
-          {badge}
-        </span>
-      )}
     </Link>
   );
 }
 
 function MobileNav({
   pathname,
-  totalItems,
   showAdmin,
 }: {
   pathname: string;
-  totalItems: number;
   showAdmin: boolean;
 }) {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -105,7 +96,6 @@ function MobileNav({
                     active={
                       pathname === link.href || pathname.startsWith(link.href + "/")
                     }
-                    badge={link.href === "/cart" ? totalItems : undefined}
                     onClick={() => setMenuOpen(false)}
                   />
                 </li>
@@ -121,7 +111,6 @@ function MobileNav({
 export default function NavBar() {
   const pathname = usePathname();
   const { data: session } = useSession();
-  const totalItems = useCartStore((s) => s.getTotalItems());
   const showAdmin = !!session?.user?.isAdmin;
   const navLinks = showAdmin
     ? [...links, { href: "/admin/products", label: "Admin" }]
@@ -148,39 +137,15 @@ export default function NavBar() {
                 active={
                   pathname === link.href || pathname.startsWith(link.href + "/")
                 }
-                badge={link.href === "/cart" ? totalItems : undefined}
               />
             </li>
           ))}
         </ul>
 
-        <div className="relative flex items-center gap-2">
-          <Link
-            href="/cart"
-            className="relative sm:hidden flex h-10 w-10 items-center justify-center rounded-lg text-gray-600 hover:bg-gray-100 transition-colors"
-            aria-label="Cart"
-          >
-            <svg className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"
-              />
-            </svg>
-            {totalItems > 0 && (
-              <span className="absolute -top-0.5 -right-0.5 flex h-5 min-w-5 items-center justify-center rounded-full bg-blue-600 px-1 text-xs font-semibold text-white">
-                {totalItems}
-              </span>
-            )}
-          </Link>
+        <div className="relative flex items-center gap-1.5 sm:gap-2">
+          <CartButton active={pathname === "/cart"} />
           <AuthButton />
-          <MobileNav
-            key={pathname}
-            pathname={pathname}
-            totalItems={totalItems}
-            showAdmin={showAdmin}
-          />
+          <MobileNav key={pathname} pathname={pathname} showAdmin={showAdmin} />
         </div>
       </div>
     </nav>
