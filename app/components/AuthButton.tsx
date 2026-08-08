@@ -130,6 +130,17 @@ export default function AuthButton() {
               Order history
             </Link>
 
+            <Link
+              href="/account"
+              role="menuitem"
+              className="flex items-center gap-3 px-4 py-2.5 text-sm text-gray-700 hover:bg-gray-50"
+            >
+              <svg className="h-4 w-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+              </svg>
+              Account settings
+            </Link>
+
             {isAdmin && (
               <Link
                 href="/admin/products"
