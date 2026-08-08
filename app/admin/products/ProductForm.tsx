@@ -1,9 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import Image from "next/image";
 import { FormEvent, useMemo, useState } from "react";
-import { getImageSrc } from "@/app/lib/images";
 
 export type ProductFormValues = {
   id?: string;
@@ -42,9 +40,11 @@ export default function ProductForm({
   const [uploading, setUploading] = useState(false);
   const [previewBroken, setPreviewBroken] = useState(false);
 
+  // Use the raw HTTPS URL for the admin preview so a bad transform
+  // (or Next/Image quirks) never blank out the thumbnail.
   const previewSrc = useMemo(() => {
-    if (!imageUrl.trim().startsWith("http")) return null;
-    return getImageSrc(imageUrl.trim());
+    const url = imageUrl.trim();
+    return url.startsWith("http") ? url : null;
   }, [imageUrl]);
 
   function validate(): FieldErrors {
@@ -285,29 +285,30 @@ export default function ProductForm({
         )}
 
         <div className="mt-4 rounded-xl border border-gray-200 bg-gray-50 p-3">
-          {previewSrc && !previewBroken ? (
+          {previewSrc ? (
             <div className="flex items-center gap-4">
-              <div className="relative aspect-square w-28 shrink-0 overflow-hidden rounded-lg bg-white ring-1 ring-gray-200">
-                <Image
-                  src={previewSrc}
-                  alt={name || "Product preview"}
-                  fill
-                  className="object-cover"
-                  unoptimized
-                  sizes="112px"
-                  onError={() => setPreviewBroken(true)}
-                />
-              </div>
+              {/* eslint-disable-next-line @next/next/no-img-element -- admin preview of arbitrary remote URLs */}
+              <img
+                key={previewSrc}
+                src={previewSrc}
+                alt={name || "Product preview"}
+                className="h-28 w-28 shrink-0 rounded-lg object-cover bg-white ring-1 ring-gray-200"
+                onError={() => setPreviewBroken(true)}
+                onLoad={() => setPreviewBroken(false)}
+              />
               <div className="min-w-0">
                 <p className="text-sm font-medium text-gray-900">Image preview</p>
                 <p className="mt-1 truncate text-xs text-gray-500">{imageUrl}</p>
+                {previewBroken && (
+                  <p className="mt-2 text-sm text-red-600">
+                    Couldn’t load this image — check the URL.
+                  </p>
+                )}
               </div>
             </div>
           ) : (
             <div className="flex h-28 items-center justify-center rounded-lg border border-dashed border-gray-300 bg-white text-sm text-gray-500">
-              {previewBroken
-                ? "Preview failed — check the image URL"
-                : "No image yet — upload one to see a preview"}
+              No image yet — upload one to see a preview
             </div>
           )}
         </div>

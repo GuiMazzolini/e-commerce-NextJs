@@ -4,75 +4,13 @@ import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 import { getAppUrl, getStripe } from "@/app/lib/stripe";
 import { getShippingCost } from "@/app/lib/shipping";
-import { clampCartQuantity, getAvailableStock } from "@/app/lib/cart-limits";
 import { encodeCartItemsMetadata } from "@/app/lib/cart-metadata";
-
-type CartItem = { productId: string; quantity: number };
-type DBProduct = {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  imageUrl: string;
-  stock?: number;
-};
-
-function parseGuestItems(body: unknown): CartItem[] | null {
-  if (!body || typeof body !== "object" || !("items" in body)) return null;
-  const items = (body as { items: unknown }).items;
-  if (!Array.isArray(items) || items.length === 0) return null;
-
-  const parsed: CartItem[] = [];
-  for (const item of items) {
-    if (!item || typeof item !== "object") return null;
-    const { productId, quantity } = item as Record<string, unknown>;
-    if (typeof productId !== "string" || !productId) return null;
-    if (typeof quantity !== "number" || !Number.isInteger(quantity)) return null;
-    const clamped = clampCartQuantity(quantity);
-    if (clamped < 1) return null;
-    parsed.push({ productId, quantity: clamped });
-  }
-  return parsed;
-}
-
-async function buildCartProducts(
-  db: Awaited<ReturnType<typeof connectToDB>>["db"],
-  items: CartItem[]
-) {
-  if (!items.length) return { products: [], stockError: null as string | null };
-
-  const productIds = items.map((i) => i.productId);
-  const productDocs = await db
-    .collection("products")
-    .find({ id: { $in: productIds } })
-    .toArray();
-
-  const products: (DBProduct & { quantity: number; stock: number })[] = [];
-
-  for (const item of items) {
-    const product = productDocs.find((p: DBProduct) => p.id === item.productId);
-    if (!product) continue;
-
-    const stock = getAvailableStock(product.stock);
-    if (item.quantity > stock) {
-      return {
-        products: [],
-        stockError:
-          stock < 1
-            ? `${product.name} is out of stock`
-            : `Only ${stock} of ${product.name} left in stock`,
-      };
-    }
-
-    products.push({
-      ...product,
-      stock,
-      quantity: item.quantity,
-    });
-  }
-
-  return { products, stockError: null };
-}
+import {
+  attachQuantitiesToProducts,
+  getCartStockError,
+  parseGuestCheckoutItems,
+  type CartItem,
+} from "@/app/lib/checkout-cart";
 
 export async function POST(req: NextRequest) {
   const session = await getServerSession(authOptions);
@@ -91,18 +29,29 @@ export async function POST(req: NextRequest) {
     } catch {
       return NextResponse.json({ error: "Invalid request body" }, { status: 400 });
     }
-    const guestItems = parseGuestItems(body);
+    const guestItems = parseGuestCheckoutItems(body);
     if (!guestItems) {
       return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
     }
     items = guestItems;
   }
 
-  const { products: cartProducts, stockError } = await buildCartProducts(db, items);
+  if (!items.length) {
+    return NextResponse.json({ error: "Cart is empty" }, { status: 400 });
+  }
 
+  const productIds = items.map((i) => i.productId);
+  const productDocs = await db
+    .collection("products")
+    .find({ id: { $in: productIds } })
+    .toArray();
+
+  const stockError = getCartStockError(items, productDocs);
   if (stockError) {
     return NextResponse.json({ error: stockError }, { status: 409 });
   }
+
+  const cartProducts = attachQuantitiesToProducts(items, productDocs);
 
   if (cartProducts.length === 0) {
     return NextResponse.json({ error: "Cart is empty" }, { status: 400 });

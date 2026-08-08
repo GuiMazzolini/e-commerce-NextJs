@@ -155,19 +155,34 @@ export async function getAccessibleOrder({
 }): Promise<Order | null> {
   const order = await getOrderBySessionId(sessionId);
   if (!order) return null;
+  return canAccessOrder(order, { sessionEmail, guestEmail }) ? order : null;
+}
 
+/**
+ * Owner or matching guest email may view an order. Case-insensitive email match.
+ */
+export function canAccessOrder(
+  order: Pick<Order, "userId" | "customerEmail">,
+  {
+    sessionEmail,
+    guestEmail,
+  }: {
+    sessionEmail?: string | null;
+    guestEmail?: string | null;
+  }
+): boolean {
   if (sessionEmail && order.userId === sessionEmail) {
-    return order;
+    return true;
   }
 
   if (
     guestEmail &&
     order.customerEmail?.toLowerCase() === guestEmail.toLowerCase()
   ) {
-    return order;
+    return true;
   }
 
-  return null;
+  return false;
 }
 
 /**

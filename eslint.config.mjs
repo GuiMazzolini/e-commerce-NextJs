@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // One-off migration utility (CommonJS require style).
+    "scripts/migrate-to-cloudinary.js",
   ]),
 ]);
 

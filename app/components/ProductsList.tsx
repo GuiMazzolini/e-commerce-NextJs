@@ -9,13 +9,11 @@ import { useCartStore } from "../lib/store/cartStore";
 import CartErrorBanner from "./CartErrorBanner";
 
 type SortOption = "name-asc" | "price-asc" | "price-desc" | "stock-desc";
-type StockFilter = "all" | "in-stock" | "out-of-stock";
 
 export default function ProductsList({ products }: { products: Product[] }) {
   const { cartProducts, addToCart, updateQuantity, isLoading } = useCartStore();
   const [query, setQuery] = useState("");
   const [sort, setSort] = useState<SortOption>("name-asc");
-  const [stockFilter, setStockFilter] = useState<StockFilter>("all");
 
   function cartEntry(productId: string) {
     return cartProducts.find((cp) => cp.id === productId);
@@ -25,17 +23,11 @@ export default function ProductsList({ products }: { products: Product[] }) {
     const q = query.trim().toLowerCase();
 
     let next = products.filter((product) => {
-      const matchesQuery =
+      return (
         !q ||
         product.name.toLowerCase().includes(q) ||
-        product.description.toLowerCase().includes(q);
-
-      const matchesStock =
-        stockFilter === "all" ||
-        (stockFilter === "in-stock" && product.stock > 0) ||
-        (stockFilter === "out-of-stock" && product.stock < 1);
-
-      return matchesQuery && matchesStock;
+        product.description.toLowerCase().includes(q)
+      );
     });
 
     next = [...next].sort((a, b) => {
@@ -53,7 +45,7 @@ export default function ProductsList({ products }: { products: Product[] }) {
     });
 
     return next;
-  }, [products, query, sort, stockFilter]);
+  }, [products, query, sort]);
 
   return (
     <div className="min-h-screen bg-gray-50 py-12">
@@ -66,8 +58,8 @@ export default function ProductsList({ products }: { products: Product[] }) {
             </p>
           </div>
 
-          <div className="grid gap-3 sm:grid-cols-3 lg:w-2xl">
-            <label className="block sm:col-span-1">
+          <div className="grid gap-3 sm:grid-cols-2 lg:w-xl">
+            <label className="block">
               <span className="mb-1 block text-sm font-medium text-gray-700">
                 Search
               </span>
@@ -95,21 +87,6 @@ export default function ProductsList({ products }: { products: Product[] }) {
                 <option value="stock-desc">Stock: high to low</option>
               </select>
             </label>
-
-            <label className="block">
-              <span className="mb-1 block text-sm font-medium text-gray-700">
-                Availability
-              </span>
-              <select
-                value={stockFilter}
-                onChange={(e) => setStockFilter(e.target.value as StockFilter)}
-                className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm"
-              >
-                <option value="all">All products</option>
-                <option value="in-stock">In stock</option>
-                <option value="out-of-stock">Out of stock</option>
-              </select>
-            </label>
           </div>
         </div>
 
@@ -121,13 +98,12 @@ export default function ProductsList({ products }: { products: Product[] }) {
               No products match
             </h2>
             <p className="text-gray-600 mb-6">
-              Try a different search term or clear the availability filter.
+              Try a different search term or reset the filters.
             </p>
             <button
               type="button"
               onClick={() => {
                 setQuery("");
-                setStockFilter("all");
                 setSort("name-asc");
               }}
               className="inline-block rounded-lg bg-blue-600 px-6 py-3 font-semibold text-white hover:bg-blue-700"

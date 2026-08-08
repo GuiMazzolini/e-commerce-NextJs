@@ -22,8 +22,11 @@ A portfolio-ready e-commerce app with product browsing, authenticated cart manag
 - Guest checkout without account creation
 - Inventory stock checks and admin product management
 - Order confirmation emails via Resend
+- Product search/sort and guest order lookup
+- Sitemap + robots for SEO basics
 - Webhook clears cart after successful payment
 - Responsive UI with sticky navbar and cart badge
+- Targeted Vitest coverage for checkout stock, fulfillment idempotency, and order access
 
 ## Getting Started
 
@@ -117,6 +120,7 @@ app/
 | `npm run build` | Production build |
 | `npm run start` | Start production server |
 | `npm run lint` | Run ESLint |
+| `npm test` | Run Vitest commerce tests |
 | `npm run seed` | Seed sample products into MongoDB |
 
 ## Cloudinary uploads
