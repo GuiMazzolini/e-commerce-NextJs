@@ -5,6 +5,22 @@ import Google from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
 import { connectToDB } from "@/app/api/db";
 import { isAdminEmail } from "@/app/lib/admin";
+import { users } from "@/app/lib/db-collections";
+import { checkRateLimit, RATE_LIMITS } from "@/app/lib/rate-limit";
+
+/**
+ * NextAuth hands `authorize` a request-like object whose headers are a plain
+ * record, not a `Headers` instance — so this cannot reuse `getClientIp`.
+ */
+function getLoginIp(req: { headers?: Record<string, string> | unknown }): string {
+  const headers = req?.headers as Record<string, string> | undefined;
+  const forwarded = headers?.["x-forwarded-for"];
+  if (typeof forwarded === "string" && forwarded.trim()) {
+    return forwarded.split(",")[0].trim();
+  }
+  const realIp = headers?.["x-real-ip"];
+  return typeof realIp === "string" && realIp.trim() ? realIp.trim() : "unknown";
+}
 
 export const authOptions: NextAuthOptions = {
   providers: [
@@ -22,7 +38,7 @@ export const authOptions: NextAuthOptions = {
         email: { label: "Email", type: "email" },
         password: { label: "Password", type: "password" },
       },
-      async authorize(credentials) {
+      async authorize(credentials, req) {
         const email = credentials?.email?.trim().toLowerCase();
         const password = credentials?.password;
 
@@ -30,8 +46,21 @@ export const authOptions: NextAuthOptions = {
           return null;
         }
 
+        // Throttle on both the source IP and the targeted account, so neither
+        // spraying one password across many accounts nor guessing many
+        // passwords against one account gets unlimited attempts.
+        const { limit, windowSec } = RATE_LIMITS.login;
+        const ip = getLoginIp(req);
+        const [byIp, byEmail] = await Promise.all([
+          checkRateLimit(`login:ip:${ip}`, limit, windowSec),
+          checkRateLimit(`login:email:${email}`, limit, windowSec),
+        ]);
+        if (!byIp.ok || !byEmail.ok) {
+          return null;
+        }
+
         const { db } = await connectToDB();
-        const user = await db.collection("users").findOne({ email });
+        const user = await users(db).findOne({ email });
 
         if (!user?.passwordHash) {
           return null;
