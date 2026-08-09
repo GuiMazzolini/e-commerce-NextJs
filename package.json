@@ -28,18 +28,18 @@
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
-    "@types/bcryptjs": "^2.4.6",
-    "@types/node": "^20",
+    "@types/bcryptjs": "^3.0.0",
+    "@types/node": "^26",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "@vitest/coverage-v8": "^4.1.10",
     "baseline-browser-mapping": "^2.10.43",
     "dotenv": "^17.2.0",
-    "eslint": "^9",
+    "eslint": "^10",
     "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
-    "tsx": "^4.20.3",
-    "typescript": "^5",
+    "tsx": "^4.23.9",
+    "typescript": "^7",
     "vitest": "^4.1.10"
   }
 }
