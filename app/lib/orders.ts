@@ -5,7 +5,13 @@ import {
 } from "@/app/lib/email";
 import { getStripe } from "@/app/lib/stripe";
 import { decodeCartItemsMetadata } from "@/app/lib/cart-metadata";
+import { carts, orders, products } from "@/app/lib/db-collections";
+import { isDuplicateKeyError } from "@/app/lib/mongo-errors";
+import { normalizeEmail } from "@/app/lib/normalize-email";
+import type { Db } from "mongodb";
 import type Stripe from "stripe";
+
+export { normalizeEmail };
 
 export type OrderItem = {
   name: string;
@@ -66,15 +72,6 @@ function centsToDollars(cents: number | null | undefined): number {
   return (cents ?? 0) / 100;
 }
 
-function isDuplicateKeyError(err: unknown): boolean {
-  return (
-    typeof err === "object" &&
-    err !== null &&
-    "code" in err &&
-    (err as { code: number }).code === 11000
-  );
-}
-
 export function buildOrderFromStripeSession(
   session: Stripe.Checkout.Session,
   userId: string
@@ -118,12 +115,12 @@ export function buildOrderFromStripeSession(
 }
 
 async function decrementStockForSession(
-  db: Awaited<ReturnType<typeof connectToDB>>["db"],
+  db: Db,
   session: Stripe.Checkout.Session
 ) {
   const cartItems = decodeCartItemsMetadata(session.metadata?.cartItems);
   for (const item of cartItems) {
-    const result = await db.collection("products").updateOne(
+    const result = await products(db).updateOne(
       { id: item.productId, stock: { $gte: item.quantity } },
       { $inc: { stock: -item.quantity } }
     );
@@ -138,13 +135,12 @@ async function decrementStockForSession(
 
 export async function getOrdersForUser(email: string): Promise<Order[]> {
   const { db } = await connectToDB();
-  const orderDocs = await db
-    .collection("orders")
-    .find({ userId: email })
+  const orderDocs = await orders(db)
+    .find({ userId: normalizeEmail(email) })
     .sort({ createdAt: -1 })
     .toArray();
 
-  return orderDocs.map((doc: Record<string, unknown>) => toOrder(doc));
+  return orderDocs.map((doc) => toOrder(doc as Record<string, unknown>));
 }
 
 export async function getAllOrders(): Promise<Order[]> {
@@ -209,9 +205,7 @@ export async function getOrderBySessionId(
   sessionId: string
 ): Promise<Order | null> {
   const { db } = await connectToDB();
-  const orderDoc = await db
-    .collection("orders")
-    .findOne({ stripeSessionId: sessionId });
+  const orderDoc = await orders(db).findOne({ stripeSessionId: sessionId });
 
   if (!orderDoc) return null;
   return toOrder(orderDoc as Record<string, unknown>);
@@ -232,7 +226,10 @@ export async function getAccessibleOrder({
 }
 
 /**
- * Owner or matching guest email may view an order. Case-insensitive email match.
+ * Owner or matching guest email may view an order. Case-insensitive on both
+ * checks: `userId` may come from Stripe's `customer_details.email`, which is
+ * whatever casing the buyer typed, while the session email comes from the
+ * account. Comparing those exactly locks owners out of their own orders.
  */
 export function canAccessOrder(
   order: Pick<Order, "userId" | "customerEmail">,
@@ -244,13 +241,14 @@ export function canAccessOrder(
     guestEmail?: string | null;
   }
 ): boolean {
-  if (sessionEmail && order.userId === sessionEmail) {
+  if (sessionEmail && normalizeEmail(order.userId) === normalizeEmail(sessionEmail)) {
     return true;
   }
 
   if (
     guestEmail &&
-    order.customerEmail?.toLowerCase() === guestEmail.toLowerCase()
+    order.customerEmail &&
+    normalizeEmail(order.customerEmail) === normalizeEmail(guestEmail)
   ) {
     return true;
   }
@@ -274,22 +272,31 @@ export async function fulfillCheckoutSession(
     return { paid: false, fulfilled: false };
   }
 
-  const userId =
+  const rawUserId =
     session.client_reference_id ||
     session.metadata?.userId ||
     session.customer_details?.email ||
     session.customer_email;
 
-  if (!userId || typeof userId !== "string") {
+  if (!rawUserId || typeof rawUserId !== "string") {
     return { paid: true, fulfilled: false };
   }
+
+  const userId = normalizeEmail(rawUserId);
+
+  // Only an authenticated checkout carries client_reference_id. A guest can
+  // type any address into Stripe, so trusting the collected email here would
+  // let them empty a registered user's saved cart.
+  const isAuthenticatedCheckout = Boolean(
+    session.client_reference_id || session.metadata?.userId
+  );
 
   const { db } = await connectToDB();
   const order = buildOrderFromStripeSession(session, userId);
 
   let inserted = false;
   try {
-    await db.collection("orders").insertOne(order);
+    await orders(db).insertOne(order);
     inserted = true;
   } catch (err) {
     if (!isDuplicateKeyError(err)) throw err;
@@ -301,10 +308,12 @@ export async function fulfillCheckoutSession(
     await sendOrderConfirmationEmail(order);
   }
 
-  await db.collection("carts").updateOne(
-    { userId },
-    { $set: { items: [], updatedAt: new Date() } }
-  );
+  if (isAuthenticatedCheckout) {
+    await carts(db).updateOne(
+      { userId },
+      { $set: { items: [], updatedAt: new Date() } }
+    );
+  }
 
   return { paid: true, fulfilled: true };
 }

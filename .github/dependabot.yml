@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: npm
+    directory: "/"
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5
+    groups:
+      # Keep framework packages together — next and eslint-config-next
+      # must move in lockstep or the lint config breaks.
+      next:
+        patterns:
+          - "next"
+          - "eslint-config-next"
+      dev-dependencies:
+        dependency-type: development

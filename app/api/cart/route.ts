@@ -1,30 +1,24 @@
 import { connectToDB } from "@/app/api/db";
 import { getServerSession } from "next-auth";
 import { authOptions } from "@/app/lib/auth";
+import { getAvailableStock, MAX_CART_QUANTITY } from "@/app/lib/cart-limits";
+import { carts, products, type CartItemDoc, type ProductDoc } from "@/app/lib/db-collections";
+import { parseBody, unauthorized } from "@/app/lib/api-request";
 import {
-  clampCartQuantity,
-  getAvailableStock,
-  MAX_CART_QUANTITY,
-} from "@/app/lib/cart-limits";
+  cartDeleteSchema,
+  cartPatchSchema,
+  cartPostSchema,
+} from "@/app/lib/schemas";
+import type { Db } from "mongodb";
 import { NextRequest, NextResponse } from "next/server";
 
-type CartItem = { productId: string; quantity: number };
-type DBProduct = {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  imageUrl: string;
-  stock?: number;
-};
-
-async function getSession() {
+/** The cart is keyed by email, so a session without one cannot own a cart. */
+async function getUserId(): Promise<string | null> {
   const session = await getServerSession(authOptions);
-  if (!session) return null;
-  return session;
+  return session?.user?.email ?? null;
 }
 
-function serializeCartProduct(product: DBProduct, quantity: number) {
+function serializeCartProduct(product: ProductDoc, quantity: number) {
   const stock = getAvailableStock(product.stock);
   return {
     id: product.id,
@@ -37,20 +31,16 @@ function serializeCartProduct(product: DBProduct, quantity: number) {
   };
 }
 
-async function buildCartProducts(
-  db: Awaited<ReturnType<typeof connectToDB>>["db"],
-  items: CartItem[]
-) {
+async function buildCartProducts(db: Db, items: CartItemDoc[]) {
   if (!items.length) return [];
   const productIds = items.map((i) => i.productId);
-  const productDocs = await db
-    .collection("products")
+  const productDocs = await products(db)
     .find({ id: { $in: productIds } })
     .toArray();
 
   return items
     .map((item) => {
-      const product = productDocs.find((p: DBProduct) => p.id === item.productId);
+      const product = productDocs.find((p) => p.id === item.productId);
       if (!product) return null;
       return serializeCartProduct(product, item.quantity);
     })
@@ -58,27 +48,27 @@ async function buildCartProducts(
 }
 
 export async function GET() {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getUserId();
+  if (!userId) return unauthorized();
 
   const { db } = await connectToDB();
-  const cart = await db.collection("carts").findOne({ userId: session.user?.email });
+  const cart = await carts(db).findOne({ userId });
   const cartProducts = await buildCartProducts(db, cart?.items || []);
 
   return NextResponse.json(cartProducts);
 }
 
 export async function POST(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getUserId();
+  if (!userId) return unauthorized();
 
-  const { productId } = await req.json();
-  if (!productId) return NextResponse.json({ error: "productId is required" }, { status: 400 });
+  const parsed = await parseBody(req, cartPostSchema);
+  if (!parsed.ok) return parsed.response;
+  const { productId } = parsed.data;
 
   const { db } = await connectToDB();
-  const userId = session.user?.email;
 
-  const product = await db.collection("products").findOne({ id: productId });
+  const product = await products(db).findOne({ id: productId });
   if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
   const stock = getAvailableStock(product.stock);
@@ -86,10 +76,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Out of stock" }, { status: 409 });
   }
 
-  const cart = await db.collection("carts").findOne({ userId });
-  const existingItem = cart?.items?.find((i: CartItem) => i.productId === productId) as
-    | CartItem
-    | undefined;
+  const cart = await carts(db).findOne({ userId });
+  const existingItem = cart?.items?.find((i) => i.productId === productId);
 
   let updatedCart;
   if (existingItem) {
@@ -100,18 +88,18 @@ export async function POST(req: NextRequest) {
       );
     }
     const nextQuantity = Math.min(existingItem.quantity + 1, MAX_CART_QUANTITY, stock);
-    updatedCart = await db.collection("carts").findOneAndUpdate(
+    updatedCart = await carts(db).findOneAndUpdate(
       { userId, "items.productId": productId },
       { $set: { "items.$.quantity": nextQuantity, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
   } else {
-    updatedCart = await db.collection("carts").findOneAndUpdate(
+    updatedCart = await carts(db).findOneAndUpdate(
       { userId },
       {
         $push: { items: { productId, quantity: 1 } },
         $set: { updatedAt: new Date() },
-        $setOnInsert: { userId, createdAt: new Date() },
+        $setOnInsert: { createdAt: new Date() },
       },
       { upsert: true, returnDocument: "after" }
     );
@@ -122,36 +110,31 @@ export async function POST(req: NextRequest) {
 }
 
 export async function PATCH(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getUserId();
+  if (!userId) return unauthorized();
 
-  const { productId, quantity } = await req.json();
-  if (!productId || quantity === undefined)
-    return NextResponse.json({ error: "productId and quantity are required" }, { status: 400 });
-  if (typeof quantity !== "number" || quantity < 0)
-    return NextResponse.json({ error: "quantity cannot be negative" }, { status: 400 });
+  const parsed = await parseBody(req, cartPatchSchema);
+  if (!parsed.ok) return parsed.response;
+  const { productId, quantity } = parsed.data;
 
   const { db } = await connectToDB();
-  const userId = session.user?.email;
 
   let updatedCart;
   if (quantity === 0) {
-    updatedCart = await db.collection("carts").findOneAndUpdate(
+    updatedCart = await carts(db).findOneAndUpdate(
       { userId },
       { $pull: { items: { productId } }, $set: { updatedAt: new Date() } },
       { returnDocument: "after" }
     );
+    if (!updatedCart)
+      return NextResponse.json({ error: "Item not found in cart" }, { status: 404 });
   } else {
-    const product = await db.collection("products").findOne({ id: productId });
+    const product = await products(db).findOne({ id: productId });
     if (!product) return NextResponse.json({ error: "Product not found" }, { status: 404 });
 
     const stock = getAvailableStock(product.stock);
-    const clamped = clampCartQuantity(quantity, stock);
-    if (clamped < 1) {
-      return NextResponse.json(
-        { error: stock < 1 ? "Out of stock" : "quantity must be at least 1" },
-        { status: stock < 1 ? 409 : 400 }
-      );
+    if (stock < 1) {
+      return NextResponse.json({ error: "Out of stock" }, { status: 409 });
     }
     if (quantity > stock) {
       return NextResponse.json(
@@ -160,9 +143,9 @@ export async function PATCH(req: NextRequest) {
       );
     }
 
-    updatedCart = await db.collection("carts").findOneAndUpdate(
+    updatedCart = await carts(db).findOneAndUpdate(
       { userId, "items.productId": productId },
-      { $set: { "items.$.quantity": clamped, updatedAt: new Date() } },
+      { $set: { "items.$.quantity": quantity, updatedAt: new Date() } },
       { returnDocument: "after" }
     );
     if (!updatedCart)
@@ -174,16 +157,16 @@ export async function PATCH(req: NextRequest) {
 }
 
 export async function DELETE(req: NextRequest) {
-  const session = await getSession();
-  if (!session) return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  const userId = await getUserId();
+  if (!userId) return unauthorized();
 
-  const { productId } = await req.json();
-  if (!productId) return NextResponse.json({ error: "productId is required" }, { status: 400 });
+  const parsed = await parseBody(req, cartDeleteSchema);
+  if (!parsed.ok) return parsed.response;
+  const { productId } = parsed.data;
 
   const { db } = await connectToDB();
-  const userId = session.user?.email;
 
-  const updatedCart = await db.collection("carts").findOneAndUpdate(
+  const updatedCart = await carts(db).findOneAndUpdate(
     { userId },
     { $pull: { items: { productId } }, $set: { updatedAt: new Date() } },
     { returnDocument: "after" }

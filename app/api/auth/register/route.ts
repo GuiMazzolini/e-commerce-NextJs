@@ -1,46 +1,27 @@
 import { NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import { connectToDB } from "@/app/api/db";
-
-type RegisterBody = {
-  name?: string;
-  email?: string;
-  password?: string;
-};
+import { users } from "@/app/lib/db-collections";
+import { isDuplicateKeyError } from "@/app/lib/mongo-errors";
+import { parseBody } from "@/app/lib/api-request";
+import { registerSchema } from "@/app/lib/schemas";
+import { enforceRateLimit, RATE_LIMITS } from "@/app/lib/rate-limit";
 
 export async function POST(request: Request) {
-  let body: RegisterBody;
+  const limited = await enforceRateLimit(
+    request,
+    "register",
+    RATE_LIMITS.register.limit,
+    RATE_LIMITS.register.windowSec
+  );
+  if (limited) return limited;
 
-  try {
-    body = await request.json();
-  } catch {
-    return NextResponse.json({ error: "Invalid request body." }, { status: 400 });
-  }
-
-  const name = body.name?.trim();
-  const email = body.email?.trim().toLowerCase();
-  const password = body.password;
-
-  if (!name || !email || !password) {
-    return NextResponse.json(
-      { error: "Name, email, and password are required." },
-      { status: 400 },
-    );
-  }
-
-  if (password.length < 8) {
-    return NextResponse.json(
-      { error: "Password must be at least 8 characters." },
-      { status: 400 },
-    );
-  }
-
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return NextResponse.json({ error: "Enter a valid email address." }, { status: 400 });
-  }
+  const parsed = await parseBody(request, registerSchema);
+  if (!parsed.ok) return parsed.response;
+  const { name, email, password } = parsed.data;
 
   const { db } = await connectToDB();
-  const existing = await db.collection("users").findOne({ email });
+  const existing = await users(db).findOne({ email });
 
   if (existing) {
     return NextResponse.json(
@@ -51,12 +32,24 @@ export async function POST(request: Request) {
 
   const passwordHash = await bcrypt.hash(password, 12);
 
-  await db.collection("users").insertOne({
-    name,
-    email,
-    passwordHash,
-    createdAt: new Date(),
-  });
+  try {
+    await users(db).insertOne({
+      name,
+      email,
+      passwordHash,
+      createdAt: new Date(),
+    });
+  } catch (err) {
+    // The check above races: two concurrent signups both pass it. The unique
+    // index on users.email is what actually enforces uniqueness.
+    if (isDuplicateKeyError(err)) {
+      return NextResponse.json(
+        { error: "An account with this email already exists." },
+        { status: 409 },
+      );
+    }
+    throw err;
+  }
 
   return NextResponse.json({ ok: true }, { status: 201 });
 }

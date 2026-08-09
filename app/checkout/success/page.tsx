@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { fulfillCheckoutSession } from "@/app/lib/orders";
+import { fulfillCheckoutSession, getOrderBySessionId } from "@/app/lib/orders";
 import ClearCartOnSuccess from "./ClearCartOnSuccess";
 
 type Props = {
@@ -13,13 +13,22 @@ export default async function CheckoutSuccessPage({ searchParams }: Props) {
     ? `/orders/lookup?order=${encodeURIComponent(session_id)}`
     : "/orders/lookup";
 
-  if (session_id) {
+  // This page is reachable by anyone with a session id, and rendering it used
+  // to write to Stripe and the database on a plain GET. Where the webhook is
+  // configured it is the only fulfillment path; this fallback exists solely
+  // for local development, where `stripe listen` may not be running.
+  const webhookConfigured = Boolean(process.env.STRIPE_WEBHOOK_SECRET);
+
+  if (session_id && !webhookConfigured) {
     try {
       const result = await fulfillCheckoutSession(session_id);
       paid = result.paid;
     } catch {
       paid = false;
     }
+  } else if (session_id) {
+    // The webhook owns fulfillment; just report whether it has landed yet.
+    paid = (await getOrderBySessionId(session_id)) !== null;
   }
 
   return (

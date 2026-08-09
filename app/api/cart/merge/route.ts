@@ -1,33 +1,29 @@
 import { connectToDB } from "@/app/api/db";
 import { authOptions } from "@/app/lib/auth";
 import { clampCartQuantity, getAvailableStock } from "@/app/lib/cart-limits";
+import {
+  carts,
+  products,
+  type CartItemDoc,
+  type ProductDoc,
+} from "@/app/lib/db-collections";
+import { parseBody } from "@/app/lib/api-request";
+import { cartMergeSchema } from "@/app/lib/schemas";
+import { enforceRateLimit, RATE_LIMITS } from "@/app/lib/rate-limit";
+import type { Db } from "mongodb";
 import { getServerSession } from "next-auth";
 import { NextRequest, NextResponse } from "next/server";
 
-type CartItem = { productId: string; quantity: number };
-type DBProduct = {
-  id: string;
-  name: string;
-  price: number;
-  description: string;
-  imageUrl: string;
-  stock?: number;
-};
-
-async function buildCartProducts(
-  db: Awaited<ReturnType<typeof connectToDB>>["db"],
-  items: CartItem[]
-) {
+async function buildCartProducts(db: Db, items: CartItemDoc[]) {
   if (!items.length) return [];
   const productIds = items.map((i) => i.productId);
-  const productDocs = await db
-    .collection("products")
+  const productDocs = await products(db)
     .find({ id: { $in: productIds } })
     .toArray();
 
   return items
     .map((item) => {
-      const product = productDocs.find((p: DBProduct) => p.id === item.productId);
+      const product = productDocs.find((p) => p.id === item.productId);
       if (!product) return null;
       return {
         id: product.id,
@@ -43,22 +39,28 @@ async function buildCartProducts(
 }
 
 export async function POST(req: NextRequest) {
+  const limited = await enforceRateLimit(
+    req,
+    "cart-merge",
+    RATE_LIMITS.cartMerge.limit,
+    RATE_LIMITS.cartMerge.windowSec
+  );
+  if (limited) return limited;
+
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
-  const body = await req.json().catch(() => null);
-  const incoming: unknown = body?.items;
-  if (!Array.isArray(incoming)) {
-    return NextResponse.json({ error: "items array is required" }, { status: 400 });
-  }
+  const parsed = await parseBody(req, cartMergeSchema);
+  if (!parsed.ok) return parsed.response;
+  const incoming = parsed.data.items;
 
   const { db } = await connectToDB();
   const userId = session.user.email;
 
-  const cart = await db.collection("carts").findOne({ userId });
-  const existing: CartItem[] = cart?.items || [];
+  const cart = await carts(db).findOne({ userId });
+  const existing: CartItemDoc[] = cart?.items || [];
 
   const quantities = new Map<string, number>();
   for (const item of existing) {
@@ -66,23 +68,19 @@ export async function POST(req: NextRequest) {
       quantities.set(item.productId, item.quantity || 0);
     }
   }
-  for (const item of incoming as CartItem[]) {
-    const productId = item?.productId;
-    const quantity = Number(item?.quantity);
-    if (!productId || !Number.isFinite(quantity) || quantity <= 0) continue;
+  for (const { productId, quantity } of incoming) {
     quantities.set(productId, (quantities.get(productId) || 0) + quantity);
   }
 
   const productIds = [...quantities.keys()];
-  const productDocs = await db
-    .collection("products")
+  const productDocs = await products(db)
     .find({ id: { $in: productIds } })
     .toArray();
-  const productsById = new Map<string, DBProduct>(
-    productDocs.map((p: DBProduct) => [p.id, p])
+  const productsById = new Map<string, ProductDoc>(
+    productDocs.map((p) => [p.id, p])
   );
 
-  const mergedItems: CartItem[] = [];
+  const mergedItems: CartItemDoc[] = [];
   for (const [productId, rawQty] of quantities.entries()) {
     const product = productsById.get(productId);
     if (!product) continue;
@@ -93,11 +91,11 @@ export async function POST(req: NextRequest) {
     }
   }
 
-  await db.collection("carts").updateOne(
+  await carts(db).updateOne(
     { userId },
     {
       $set: { items: mergedItems, updatedAt: new Date() },
-      $setOnInsert: { userId, createdAt: new Date() },
+      $setOnInsert: { createdAt: new Date() },
     },
     { upsert: true }
   );

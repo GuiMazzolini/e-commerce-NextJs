@@ -1,3 +1,6 @@
+/** Stripe's hard cap on the length of a single metadata value. */
+export const STRIPE_METADATA_VALUE_LIMIT = 500;
+
 /**
  * Comma-separated `productId:qty` pairs for Stripe session metadata (500-char limit).
  * Example: "hoodie:2,stickers:1"

@@ -100,6 +100,17 @@ describe("canAccessOrder", () => {
     ).toBe(true);
   });
 
+  it("allows the owner when Stripe recorded a different email casing", () => {
+    // userId can come from Stripe's customer_details.email, which is whatever
+    // the buyer typed — comparing it exactly locked owners out of their orders.
+    expect(
+      canAccessOrder(
+        { userId: "Owner@Example.COM", customerEmail: null },
+        { sessionEmail: "owner@example.com" }
+      )
+    ).toBe(true);
+  });
+
   it("allows guests who know the checkout email", () => {
     expect(
       canAccessOrder(order, { guestEmail: "Guest@Example.com" })

@@ -1,12 +1,13 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useSession } from "next-auth/react";
 import { Product } from "../product-data";
 import Link from "next/link";
 import CartItem from "../components/CartItem";
 import CartErrorBanner from "../components/CartErrorBanner";
 import { useCartStore } from "../lib/store/cartStore";
+import { useCheckout } from "../lib/use-checkout";
 import {
   FREE_SHIPPING_THRESHOLD,
   getOrderTotal,
@@ -16,21 +17,38 @@ import {
 export default function ShoppingCartList({ initialCartProducts }: { initialCartProducts: Product[] }) {
   const { status } = useSession();
   const isGuest = status === "unauthenticated";
+  const { startCheckout, loading: checkoutLoading, error: checkoutError } = useCheckout();
 
-  const cartProducts = useCartStore((s) => s.cartProducts);
-  const subtotal = useCartStore((s) => s.getSubtotal());
-  const totalItems = useCartStore((s) => s.getTotalItems());
+  const storeCart = useCartStore((s) => s.cartProducts);
   const setCart = useCartStore((s) => s.setCart);
+  const [synced, setSynced] = useState(false);
 
+  useEffect(() => {
+    if (status === "loading") return;
+    // Unconditional, so emptying the cart on another device propagates here
+    // instead of leaving stale items on screen.
+    if (status === "authenticated") {
+      setCart(initialCartProducts);
+    }
+    // Deliberate hydration flag: exactly one extra render once the client store
+    // is authoritative. Without it the first paint reads an empty store.
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSynced(true);
+  }, [status, initialCartProducts, setCart]);
+
+  // Until the store is synced, render the server's snapshot. Reading the store
+  // straight away would paint "your cart is empty" on every load and then flip
+  // — on the page the customer pays from.
+  const cartProducts = synced ? storeCart : initialCartProducts;
+
+  const subtotal = cartProducts.reduce(
+    (sum, p) => sum + p.price * (p.quantity || 1),
+    0
+  );
+  const totalItems = cartProducts.reduce((sum, p) => sum + (p.quantity || 1), 0);
   const shipping = getShippingCost(subtotal);
   const total = getOrderTotal(subtotal);
   const remainingForFreeShipping = FREE_SHIPPING_THRESHOLD - subtotal;
-
-  useEffect(() => {
-    if (initialCartProducts.length > 0) {
-      setCart(initialCartProducts);
-    }
-  }, [initialCartProducts, setCart]);
 
   if (cartProducts.length === 0) {
     return (
@@ -115,12 +133,25 @@ export default function ShoppingCartList({ initialCartProducts }: { initialCartP
                 </div>
               </div>
 
-              <Link
-                href="/checkout"
-                className="block text-center w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg mb-4"
+              {checkoutError && (
+                <p className="mb-4 text-sm text-red-600" role="alert">
+                  {checkoutError}
+                </p>
+              )}
+
+              <button
+                type="button"
+                onClick={startCheckout}
+                disabled={checkoutLoading}
+                className="block text-center w-full bg-blue-600 text-white py-4 rounded-lg font-semibold hover:bg-blue-700 transition-colors shadow-md hover:shadow-lg mb-2 disabled:opacity-60 disabled:pointer-events-none"
               >
-                Proceed to Checkout
-              </Link>
+                {checkoutLoading ? "Redirecting…" : "Pay with Stripe"}
+              </button>
+
+              <p className="mb-4 text-center text-xs text-gray-500">
+                Secure payment on Stripe. {isGuest && "No account needed — "}
+                shipping and email are collected there.
+              </p>
 
               <Link
                 href="/products"

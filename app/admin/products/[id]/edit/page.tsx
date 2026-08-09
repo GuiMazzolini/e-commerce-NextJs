@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { connectToDB } from "@/app/api/db";
 import { getAvailableStock } from "@/app/lib/cart-limits";
+import { products } from "@/app/lib/db-collections";
 import ProductForm from "../../ProductForm";
 
 type Params = { id: string };
@@ -18,7 +19,7 @@ export default async function EditProductPage({
 }) {
   const { id } = await params;
   const { db } = await connectToDB();
-  const product = await db.collection("products").findOne({ id });
+  const product = await products(db).findOne({ id });
   if (!product) notFound();
 
   return (

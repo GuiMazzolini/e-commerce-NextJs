@@ -7,7 +7,9 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "typecheck": "tsc --noEmit",
     "test": "vitest run",
+    "test:coverage": "vitest run --coverage",
     "test:watch": "vitest",
     "seed": "tsx scripts/seed.ts"
   },
@@ -15,12 +17,13 @@
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "mongodb": "^7.0.0",
-    "next": "16.0.4",
+    "next": "16.3.0",
     "next-auth": "^4.24.13",
     "react": "19.2.0",
     "react-dom": "19.2.0",
     "resend": "^6.18.1",
     "stripe": "^22.1.0",
+    "zod": "^4.4.3",
     "zustand": "^5.0.11"
   },
   "devDependencies": {
@@ -33,7 +36,7 @@
     "baseline-browser-mapping": "^2.10.43",
     "dotenv": "^17.2.0",
     "eslint": "^9",
-    "eslint-config-next": "16.0.4",
+    "eslint-config-next": "16.3.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.3",
     "typescript": "^5",

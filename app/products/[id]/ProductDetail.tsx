@@ -1,11 +1,11 @@
 "use client";
 
 import Image from "next/image";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
 import CartErrorBanner from "@/app/components/CartErrorBanner";
 import { getImageSrc } from "@/app/lib/images";
 import { useCartStore } from "@/app/lib/store/cartStore";
+import { useCheckout } from "@/app/lib/use-checkout";
 import type { Product } from "@/app/product-data";
 
 type ProductDetailProps = {
@@ -13,10 +13,15 @@ type ProductDetailProps = {
 };
 
 export default function ProductDetail({ product }: ProductDetailProps) {
-  const router = useRouter();
   const [buyingNow, setBuyingNow] = useState(false);
 
-  const { cartProducts, addToCart, removeFromCart, isLoading } = useCartStore();
+  const cartProducts = useCartStore((s) => s.cartProducts);
+  const addToCart = useCartStore((s) => s.addToCart);
+  const removeFromCart = useCartStore((s) => s.removeFromCart);
+  const isLoading = useCartStore((s) => s.isLoading);
+
+  const { startCheckout, loading: checkoutLoading } = useCheckout();
+
   const inCart = cartProducts.some((p) => p.id === product.id);
   const loading = isLoading(product.id);
   const outOfStock = product.stock < 1;
@@ -32,7 +37,8 @@ export default function ProductDetail({ product }: ProductDetailProps) {
           .cartProducts.some((p) => p.id === product.id);
         if (!added) return;
       }
-      router.push("/checkout");
+      // Straight to Stripe — the cart page is the only review step.
+      await startCheckout();
     } finally {
       setBuyingNow(false);
     }
@@ -119,10 +125,10 @@ export default function ProductDetail({ product }: ProductDetailProps) {
                 <button
                   type="button"
                   onClick={handleBuyNow}
-                  disabled={loading || buyingNow || outOfStock}
+                  disabled={loading || buyingNow || checkoutLoading || outOfStock}
                   className="flex-1 bg-gray-200 hover:bg-gray-300 text-gray-800 font-semibold py-4 px-8 rounded-lg transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {buyingNow ? "Processing..." : "Buy Now"}
+                  {buyingNow || checkoutLoading ? "Processing..." : "Buy Now"}
                 </button>
               </div>
 
