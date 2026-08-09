@@ -6,13 +6,9 @@ import AuthButton from "./AuthButton";
 import CartButton from "./CartButton";
 
 /**
- * Cart lives beside the auth controls as an icon; order history and admin
- * live in the account menu, since both are per-user and need a session.
- * What remains is public browsing, which fits at every breakpoint without a
- * hamburger.
+ * Shop + cart sit in the center as the main browsing actions.
+ * Account controls stay on the right.
  */
-const links = [{ href: "/products", label: "Products" }];
-
 function NavLink({
   href,
   label,
@@ -38,6 +34,8 @@ function NavLink({
 
 export default function NavBar() {
   const pathname = usePathname();
+  const shopActive =
+    pathname === "/products" || pathname.startsWith("/products/");
 
   return (
     <nav className="sticky top-0 z-50 bg-white/80 backdrop-blur-md border-b border-gray-200">
@@ -51,22 +49,12 @@ export default function NavBar() {
           </span>
         </Link>
 
-        <ul className="flex items-center gap-1">
-          {links.map((link) => (
-            <li key={link.href}>
-              <NavLink
-                href={link.href}
-                label={link.label}
-                active={
-                  pathname === link.href || pathname.startsWith(link.href + "/")
-                }
-              />
-            </li>
-          ))}
-        </ul>
-
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-1">
+          <NavLink href="/products" label="Shop" active={shopActive} />
           <CartButton active={pathname === "/cart"} />
+        </div>
+
+        <div className="flex items-center gap-1.5 sm:gap-2 shrink-0">
           {/* Remounting on navigation is what closes the account menu. */}
           <AuthButton key={pathname} />
         </div>
