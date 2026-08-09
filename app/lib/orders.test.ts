@@ -82,6 +82,9 @@ describe("buildOrderFromStripeSession", () => {
     expect(order.total).toBe(30);
     expect(order.shippingAddress?.city).toBe("Austin");
     expect(order.status).toBe("paid");
+    expect(order.trackingNumber).toBeNull();
+    expect(order.carrier).toBeNull();
+    expect(order.shippedAt).toBeNull();
   });
 });
 

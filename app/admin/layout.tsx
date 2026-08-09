@@ -11,7 +11,7 @@ export default async function AdminLayout({
 }) {
   const session = await getServerSession(authOptions);
   if (!session?.user?.email) {
-    redirect("/login?callbackUrl=/admin/products");
+    redirect("/login?callbackUrl=/admin/orders");
   }
   if (!isAdminEmail(session.user.email)) {
     redirect("/");
@@ -25,14 +25,20 @@ export default async function AdminLayout({
             <p className="text-xs font-semibold uppercase tracking-wide text-blue-600">
               Admin
             </p>
-            <h1 className="text-xl font-bold text-gray-900">Product management</h1>
+            <h1 className="text-xl font-bold text-gray-900">Shop management</h1>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <Link
+              href="/admin/orders"
+              className="text-sm font-medium text-gray-600 hover:text-gray-900"
+            >
+              Orders
+            </Link>
             <Link
               href="/admin/products"
               className="text-sm font-medium text-gray-600 hover:text-gray-900"
             >
-              All products
+              Products
             </Link>
             <Link
               href="/admin/products/new"

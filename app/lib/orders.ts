@@ -1,5 +1,8 @@
 import { connectToDB } from "@/app/api/db";
-import { sendOrderConfirmationEmail } from "@/app/lib/email";
+import {
+  sendOrderConfirmationEmail,
+  sendShippingNotificationEmail,
+} from "@/app/lib/email";
 import { getStripe } from "@/app/lib/stripe";
 import { decodeCartItemsMetadata } from "@/app/lib/cart-metadata";
 import type Stripe from "stripe";
@@ -20,6 +23,8 @@ export type ShippingAddress = {
   country: string | null;
 };
 
+export type OrderStatus = "paid" | "shipped";
+
 export type Order = {
   stripeSessionId: string;
   userId: string;
@@ -30,11 +35,15 @@ export type Order = {
   total: number;
   currency: string;
   shippingAddress: ShippingAddress | null;
-  status: "paid";
+  status: OrderStatus;
+  trackingNumber: string | null;
+  carrier: string | null;
+  shippedAt: Date | null;
   createdAt: Date;
 };
 
 export function toOrder(doc: Record<string, unknown>): Order {
+  const status = doc.status === "shipped" ? "shipped" : "paid";
   return {
     stripeSessionId: String(doc.stripeSessionId),
     userId: String(doc.userId),
@@ -45,7 +54,10 @@ export function toOrder(doc: Record<string, unknown>): Order {
     total: Number(doc.total),
     currency: String(doc.currency ?? "usd"),
     shippingAddress: (doc.shippingAddress as ShippingAddress | null) ?? null,
-    status: "paid",
+    status,
+    trackingNumber: doc.trackingNumber ? String(doc.trackingNumber) : null,
+    carrier: doc.carrier ? String(doc.carrier) : null,
+    shippedAt: doc.shippedAt ? new Date(doc.shippedAt as string | Date) : null,
     createdAt: new Date(doc.createdAt as string | Date),
   };
 }
@@ -98,6 +110,9 @@ export function buildOrderFromStripeSession(
         }
       : null,
     status: "paid",
+    trackingNumber: null,
+    carrier: null,
+    shippedAt: null,
     createdAt: new Date(),
   };
 }
@@ -130,6 +145,64 @@ export async function getOrdersForUser(email: string): Promise<Order[]> {
     .toArray();
 
   return orderDocs.map((doc: Record<string, unknown>) => toOrder(doc));
+}
+
+export async function getAllOrders(): Promise<Order[]> {
+  const { db } = await connectToDB();
+  const orderDocs = await db
+    .collection("orders")
+    .find({})
+    .sort({ createdAt: -1 })
+    .toArray();
+
+  return orderDocs.map((doc: Record<string, unknown>) => toOrder(doc));
+}
+
+/**
+ * Mark an order as shipped. Optionally notify the customer by email.
+ */
+export async function markOrderShipped({
+  sessionId,
+  trackingNumber,
+  carrier,
+  sendEmail = true,
+}: {
+  sessionId: string;
+  trackingNumber: string;
+  carrier?: string | null;
+  sendEmail?: boolean;
+}): Promise<Order | null> {
+  const tracking = trackingNumber.trim();
+  if (!tracking) {
+    throw new Error("Tracking number is required");
+  }
+
+  const carrierValue = carrier?.trim() || null;
+  const shippedAt = new Date();
+
+  const { db } = await connectToDB();
+  const result = await db.collection("orders").findOneAndUpdate(
+    { stripeSessionId: sessionId },
+    {
+      $set: {
+        status: "shipped",
+        trackingNumber: tracking,
+        carrier: carrierValue,
+        shippedAt,
+      },
+    },
+    { returnDocument: "after" }
+  );
+
+  const doc = result as Record<string, unknown> | null;
+  if (!doc) return null;
+
+  const order = toOrder(doc);
+  if (sendEmail) {
+    await sendShippingNotificationEmail(order);
+  }
+
+  return order;
 }
 
 export async function getOrderBySessionId(

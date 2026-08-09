@@ -134,3 +134,76 @@ export async function sendOrderConfirmationEmail(order: Order): Promise<void> {
     console.error("Failed to send order confirmation email:", err);
   }
 }
+
+function buildShippingNotificationHtml(order: Order, shopUrl: string) {
+  const carrierLine = order.carrier
+    ? `<p style="margin:0 0 8px;color:#6b7280;">Carrier: <strong style="color:#111827;">${order.carrier}</strong></p>`
+    : "";
+
+  return `
+<!DOCTYPE html>
+<html>
+  <body style="margin:0;padding:0;background:#f9fafb;font-family:Arial,sans-serif;color:#111827;">
+    <div style="max-width:560px;margin:0 auto;padding:32px 16px;">
+      <div style="background:#ffffff;border-radius:16px;padding:32px;box-shadow:0 1px 3px rgba(0,0,0,0.08);">
+        <p style="margin:0 0 8px;font-size:13px;font-weight:700;letter-spacing:0.08em;text-transform:uppercase;color:#2563eb;">
+          StyleShop
+        </p>
+        <h1 style="margin:0 0 12px;font-size:28px;line-height:1.2;">Your order is on the way</h1>
+        <p style="margin:0 0 24px;color:#6b7280;line-height:1.6;">
+          Good news — we&apos;ve shipped your order. Use the tracking details below to follow the delivery.
+        </p>
+
+        <div style="background:#f9fafb;border-radius:12px;padding:16px;margin-bottom:24px;">
+          <p style="margin:0 0 8px;font-size:12px;font-weight:700;text-transform:uppercase;color:#6b7280;">Tracking</p>
+          ${carrierLine}
+          <p style="margin:0;font-size:18px;font-weight:700;letter-spacing:0.02em;color:#111827;">
+            ${order.trackingNumber}
+          </p>
+        </div>
+
+        <a href="${shopUrl}/orders/${encodeURIComponent(order.stripeSessionId)}${
+          order.customerEmail
+            ? `?email=${encodeURIComponent(order.customerEmail)}`
+            : ""
+        }" style="display:inline-block;background:#2563eb;color:#ffffff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;">
+          View order details
+        </a>
+
+        <p style="margin:24px 0 0;font-size:12px;color:#9ca3af;line-height:1.6;">
+          Order reference: ${order.stripeSessionId}
+        </p>
+      </div>
+    </div>
+  </body>
+</html>`;
+}
+
+/**
+ * Notifies the customer that their order has shipped. No-op without Resend config.
+ */
+export async function sendShippingNotificationEmail(order: Order): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY;
+  if (!apiKey) return;
+
+  const to = order.customerEmail;
+  if (!to || !order.trackingNumber) return;
+
+  const from =
+    process.env.RESEND_FROM_EMAIL || "StyleShop <onboarding@resend.dev>";
+  const shopUrl = getAppUrl();
+  const resend = new Resend(apiKey);
+
+  try {
+    await resend.emails.send({
+      from,
+      to,
+      subject: `Your StyleShop order has shipped${
+        order.carrier ? ` via ${order.carrier}` : ""
+      }`,
+      html: buildShippingNotificationHtml(order, shopUrl),
+    });
+  } catch (err) {
+    console.error("Failed to send shipping notification email:", err);
+  }
+}

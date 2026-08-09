@@ -7,7 +7,9 @@ import {
   formatOrderDate,
   OrderItems,
   OrderShipping,
+  OrderStatusBadge,
   OrderTotals,
+  OrderTracking,
 } from "../order-ui";
 
 type Props = {
@@ -92,7 +94,8 @@ export default async function OrderDetailPage({
                 {formatOrderDate(order.createdAt)}
               </p>
             </div>
-            <div className="text-right">
+            <div className="text-right space-y-2">
+              <OrderStatusBadge order={order} />
               <p className="text-sm text-gray-500">Total paid</p>
               <p className="text-xl font-bold text-blue-600">
                 ${order.total.toFixed(2)}
@@ -104,6 +107,7 @@ export default async function OrderDetailPage({
             <OrderItems order={order} />
             <OrderTotals order={order} />
             <OrderShipping order={order} />
+            <OrderTracking order={order} />
           </div>
         </article>
       </div>

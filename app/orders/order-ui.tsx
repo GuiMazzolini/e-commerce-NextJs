@@ -75,3 +75,39 @@ export function OrderShipping({ order }: { order: Order }) {
   );
 }
 
+export function OrderStatusBadge({ order }: { order: Order }) {
+  const shipped = order.status === "shipped";
+  return (
+    <span
+      className={
+        shipped
+          ? "rounded-md bg-green-100 px-2.5 py-1 text-xs font-semibold text-green-800"
+          : "rounded-md bg-amber-100 px-2.5 py-1 text-xs font-semibold text-amber-800"
+      }
+    >
+      {shipped ? "Shipped" : "Paid"}
+    </span>
+  );
+}
+
+export function OrderTracking({ order }: { order: Order }) {
+  if (order.status !== "shipped" || !order.trackingNumber) return null;
+
+  return (
+    <div className="border-t border-gray-100 pt-4">
+      <p className="text-sm font-semibold text-gray-900 mb-1">Tracking</p>
+      {order.carrier && (
+        <p className="text-sm text-gray-600">Carrier: {order.carrier}</p>
+      )}
+      <p className="text-sm font-medium text-gray-900 tracking-wide">
+        {order.trackingNumber}
+      </p>
+      {order.shippedAt && (
+        <p className="mt-1 text-xs text-gray-500">
+          Shipped {formatOrderDate(order.shippedAt)}
+        </p>
+      )}
+    </div>
+  );
+}
+
